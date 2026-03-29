@@ -224,3 +224,90 @@ You can also invoke the CLI directly from the project root:
 ```
 python -m patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesTop.txt
 ```
+
+---
+
+## JSON and DXF Output
+
+Patch‑Matcher can be used as part of automated CNC workflows by reading geometry from JSON files and exporting results in either JSON or DXF format.  
+These options integrate cleanly with external preprocessors, CAM pipelines, or batch‑processing scripts.
+
+### JSON input
+
+Instead of specifying geometry on the command line, you can provide a JSON file:
+
+```json
+{
+  "width": 3.1,
+  "height": 4.9,
+  "cx": 10,
+  "cy": 20
+}
+```
+
+Run the replacement using:
+
+```
+patchmatcher replace --json-in input.json --table config/patchSizesTop.txt
+```
+
+This performs the same patch‑matching and geometry replacement as the standard CLI call.
+
+---
+
+### JSON output
+
+To write the result to a JSON file:
+
+```
+patchmatcher replace \
+    --width 3.1 \
+    --height 4.9 \
+    --cx 10 \
+    --cy 20 \
+    --table config/patchSizesTop.txt \
+    --json-out result.json
+```
+
+The output file contains the new rectangle and center‑hole geometry:
+
+```json
+{
+  "rectangle": {
+    "width": 3.0,
+    "height": 5.0,
+    "cx": 10.0,
+    "cy": 20.0
+  },
+  "center_hole": {
+    "radius": 0.05,
+    "cx": 10.0,
+    "cy": 20.0
+  }
+}
+```
+
+This format is suitable for downstream automation or integration with CNC toolpath generators.
+
+---
+
+### DXF export
+
+Patch‑Matcher can also export the replaced geometry as a minimal DXF file containing:
+
+- a rectangular LWPOLYLINE  
+- a circular center hole  
+
+Example:
+
+```
+patchmatcher replace \
+    --width 3.1 \
+    --height 4.9 \
+    --cx 10 \
+    --cy 20 \
+    --table config/patchSizesTop.txt \
+    --dxf-out output.dxf
+```
+
+The resulting DXF can be imported into CAD/CAM software or used as part of a CNC preprocessing pipeline.
