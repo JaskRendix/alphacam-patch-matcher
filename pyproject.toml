@@ -7,16 +7,20 @@ requires-python = ">=3.10"
 authors = [
     { name = "Giorgio" }
 ]
+license = { file = "LICENSE" }
 
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/<your-username>/<your-repo>"
-Source = "https://github.com/<your-username>/<your-repo>"
+Homepage = "https://github.com/JaskRendix/alphacam-patch-matcher"
+Source = "https://github.com/JaskRendix/alphacam-patch-matcher"
 
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["patchmatcher"]
 
 [tool.pytest.ini_options]
 pythonpath = "."
