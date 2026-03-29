@@ -15,6 +15,9 @@ dependencies = []
 Homepage = "https://github.com/JaskRendix/alphacam-patch-matcher"
 Source = "https://github.com/JaskRendix/alphacam-patch-matcher"
 
+[project.scripts]
+patchmatcher = "patchmatcher.__main__:main"
+
 [build-system]
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"

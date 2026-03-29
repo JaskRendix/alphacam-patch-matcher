@@ -123,3 +123,104 @@ Original: Rectangle(width=3.1, height=4.9, cx=10, cy=20)
 Matched patch: Rectangle(width=3.0, height=5.0, cx=10, cy=20)
 Center hole: Circle(radius=0.05, cx=10, cy=20)
 ```
+
+Here’s a clean, polished **CLI section** you can drop directly into your README.  
+It fits your existing structure and keeps the tone consistent with the rest of the document.
+
+---
+
+## Command‑Line Interface (CLI)
+
+Patch‑Matcher includes a lightweight command‑line interface that exposes the core functionality of the library without writing any Python code.  
+Once the package is installed, the `patchmatcher` command becomes available system‑wide.
+
+### Installation (editable or local)
+
+```
+pip install .
+```
+
+After installation, the following commands are available.
+
+---
+
+### `match` — Find the closest patch
+
+Given a rectangle width and height, this command searches the selected patch table and returns the closest matching patch size.
+
+```
+patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesTop.txt
+```
+
+**Output:**
+
+```
+Matched patch: 3.0 x 5.0
+```
+
+---
+
+### `replace` — Replace geometry with a matched patch
+
+This performs the full geometry replacement:  
+- finds the closest patch  
+- creates a new rectangle  
+- generates the center hole  
+
+```
+patchmatcher replace \
+    --width 3.1 \
+    --height 4.9 \
+    --cx 10 \
+    --cy 20 \
+    --table config/patchSizesTop.txt
+```
+
+**Output:**
+
+```
+New rectangle: 3.0 x 5.0 at (10.0, 20.0)
+Center hole: radius 0.05 at (10.0, 20.0)
+```
+
+Optional adjustments:
+
+```
+--x-adjust 0.1
+--y-adjust 0.2
+```
+
+---
+
+### `butterfly` — Lookup butterfly inlay parameters
+
+Retrieves the parametric definition for any butterfly code (W1–W7, B1–B2).
+
+```
+patchmatcher butterfly W3
+```
+
+**Output:**
+
+```
+Butterfly W3:
+  diam1: 0.05
+  diam2: 0.05
+  circ_offset: 0.60
+  line1: 1.01247
+  offset: 0.30823
+  angle: 9
+  z_bottom: -0.5
+  radius1: 0
+  radius2: 0
+```
+
+---
+
+### Running the CLI without installation
+
+You can also invoke the CLI directly from the project root:
+
+```
+python -m patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesTop.txt
+```

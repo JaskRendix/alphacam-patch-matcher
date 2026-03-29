@@ -1,6 +1,6 @@
-from patchmatcher.tables import load_patch_table
 from patchmatcher.geometry import Rectangle
 from patchmatcher.matching import replace_geometry
+from patchmatcher.tables import load_patch_table
 
 patches = load_patch_table("config/patchSizesTop.txt")
 

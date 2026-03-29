@@ -1,6 +1,7 @@
 import pytest
-from patchmatcher.tables import load_patch_table
+
 from patchmatcher.geometry import Rectangle
+from patchmatcher.tables import load_patch_table
 
 
 @pytest.fixture

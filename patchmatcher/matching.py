@@ -1,4 +1,4 @@
-from .geometry import Rectangle, Circle
+from .geometry import Circle, Rectangle
 
 PatchSize = tuple[float, float]
 
@@ -10,15 +10,11 @@ def closest_patch(width: float, height: float, patches: list[PatchSize]) -> Patc
       2. From that index onward, find closest height
     """
     # Step 1: closest width
-    best_w_idx = min(
-        range(len(patches)),
-        key=lambda i: abs(patches[i][0] - width)
-    )
+    best_w_idx = min(range(len(patches)), key=lambda i: abs(patches[i][0] - width))
 
     # Step 2: closest height starting from best_w_idx
     best_idx = min(
-        range(best_w_idx, len(patches)),
-        key=lambda i: abs(patches[i][1] - height)
+        range(best_w_idx, len(patches)), key=lambda i: abs(patches[i][1] - height)
     )
 
     return patches[best_idx]

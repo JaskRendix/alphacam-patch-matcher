@@ -1,4 +1,4 @@
-from patchmatcher.geometry import Rectangle, Circle
+from patchmatcher.geometry import Circle, Rectangle
 
 
 def test_rectangle_bounds():

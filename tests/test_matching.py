@@ -1,5 +1,5 @@
-from patchmatcher.matching import closest_patch, replace_geometry
 from patchmatcher.geometry import Rectangle
+from patchmatcher.matching import closest_patch, replace_geometry
 
 
 def test_closest_patch(top_patches):
