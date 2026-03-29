@@ -5,6 +5,7 @@ from pathlib import Path
 from .butterflies import get_butterfly_params
 from .geometry import Rectangle
 from .matching import closest_patch, replace_geometry
+from .svg import scene_to_svg
 from .tables import load_patch_table
 
 
@@ -126,6 +127,13 @@ def cmd_replace(args):
         print(f"Wrote DXF to {args.dxf_out}")
         return
 
+    # SVG output
+    if args.svg_out:
+        svg = scene_to_svg(new_rect, hole)
+        args.svg_out.write_text(svg)
+        print(f"Wrote SVG to {args.svg_out}")
+        return
+
     # Default text output
     print(
         f"New rectangle: {new_rect.width} x {new_rect.height} at ({new_rect.cx}, {new_rect.cy})"
@@ -171,6 +179,9 @@ def build_parser():
 
     # DXF output
     p_replace.add_argument("--dxf-out", type=Path)
+
+    # SVG output
+    p_replace.add_argument("--svg-out", type=Path)
 
     p_replace.set_defaults(func=cmd_replace)
 

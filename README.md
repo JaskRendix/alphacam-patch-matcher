@@ -311,3 +311,26 @@ patchmatcher replace \
 ```
 
 The resulting DXF can be imported into CAD/CAM software or used as part of a CNC preprocessing pipeline.
+
+---
+
+### SVG export
+
+For quick visual inspection or documentation, Patch‑Matcher can export the replaced geometry as an SVG:
+
+```bash
+patchmatcher replace \
+    --width 3.1 \
+    --height 4.9 \
+    --cx 10 \
+    --cy 20 \
+    --table config/patchSizesTop.txt \
+    --svg-out output.svg
+```
+
+The generated SVG contains:
+
+- the matched rectangle outline  
+- the center hole as a circle (in a contrasting stroke color)  
+
+This is useful for validating patch selection and geometry replacement without opening a full CAD/CAM system.
