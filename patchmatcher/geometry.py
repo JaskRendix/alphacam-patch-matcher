@@ -1,5 +1,6 @@
 import math
 from dataclasses import dataclass
+from typing import Self
 
 
 @dataclass(frozen=True)
@@ -26,7 +27,7 @@ class Rectangle:
         xmin, ymin, xmax, ymax = self.bounds
         return xmin <= x <= xmax and ymin <= y <= ymax
 
-    def translate(self, dx: float, dy: float) -> "Rectangle":
+    def translate(self, dx: float, dy: float) -> Self:
         return Rectangle(
             width=self.width,
             height=self.height,
@@ -48,7 +49,7 @@ class Circle:
     def contains_point(self, x: float, y: float) -> bool:
         return (x - self.cx) ** 2 + (y - self.cy) ** 2 <= self.radius**2
 
-    def translate(self, dx: float, dy: float) -> "Circle":
+    def translate(self, dx: float, dy: float) -> Self:
         return Circle(
             radius=self.radius,
             cx=self.cx + dx,

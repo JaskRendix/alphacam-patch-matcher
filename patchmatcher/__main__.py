@@ -2,7 +2,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .butterflies import get_butterfly_params
+from .butterflies import get_butterfly_params, load_butterfly_table
 from .geometry import Circle, Rectangle
 from .matching import PatchMatcher
 from .svg import scene_to_svg
@@ -143,7 +143,28 @@ def cmd_replace(args) -> None:
 
 
 def cmd_butterfly(args) -> None:
-    params = get_butterfly_params(args.code)
+    # If user provided a custom table, load it
+    if args.table:
+        try:
+            table = load_butterfly_table(args.table)
+        except Exception as e:
+            print(f"Failed to load butterfly table: {e}")
+            return
+
+        if args.code not in table:
+            print(f"Unknown butterfly code: {args.code}")
+            return
+
+        params = table[args.code]
+
+    else:
+        # Default built‑in table
+        try:
+            params = get_butterfly_params(args.code)
+        except ValueError as e:
+            print(e)
+            return
+
     print(f"Butterfly {args.code}:")
     for field, value in params.__dict__.items():
         print(f"  {field}: {value}")
@@ -191,6 +212,7 @@ def build_parser() -> argparse.ArgumentParser:
         "butterfly", help="Lookup butterfly parameters (W1-W7, B1-B2)."
     )
     p_bfly.add_argument("code", type=str)
+    p_bfly.add_argument("--table", type=Path, help="Path to butterfly TOML file")
     p_bfly.set_defaults(func=cmd_butterfly)
 
     return parser

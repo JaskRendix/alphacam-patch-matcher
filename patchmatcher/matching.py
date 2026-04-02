@@ -38,7 +38,7 @@ class PatchMatcher:
         geo: Rectangle,
         x_adjust: float = 0.0,
         y_adjust: float = 0.0,
-    ):
+    ) -> tuple[Rectangle, Circle]:
         """
         Replace a geometry with the closest patch rectangle.
         Returns:

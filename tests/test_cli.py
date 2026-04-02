@@ -66,3 +66,61 @@ def test_cli_butterfly():
     assert result.returncode == 0
     assert "Butterfly W1:" in result.stdout
     assert "diam1:" in result.stdout
+
+
+def test_cli_butterfly_custom_table(tmp_path):
+    toml_path = tmp_path / "custom.toml"
+    toml_path.write_text(
+        """
+        [W1]
+        diam1 = 0.05
+        diam2 = 0.05
+        circ_offset = 0.35
+        line1 = 0.6
+        offset = 0.2
+        angle = 9
+        z_bottom = -0.5
+        radius1 = 0
+        radius2 = 0
+        """
+    )
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "butterfly",
+            "W1",
+            "--table",
+            str(toml_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Butterfly W1:" in result.stdout
+    assert "diam1:" in result.stdout
+
+
+def test_cli_butterfly_invalid_table(tmp_path):
+    toml_path = tmp_path / "bad.toml"
+    toml_path.write_text("not even toml")
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "butterfly",
+            "W1",
+            "--table",
+            str(toml_path),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Failed to load butterfly table" in result.stdout

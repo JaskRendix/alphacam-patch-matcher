@@ -1,6 +1,7 @@
 from collections.abc import Iterable, Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Self
 
 
 @dataclass(frozen=True)
@@ -19,7 +20,7 @@ class PatchTable:
         self.patches = list(patches)
 
     @classmethod
-    def from_file(cls, path: str | Path) -> "PatchTable":
+    def from_file(cls, path: str | Path) -> Self:
         """
         Load a VB6-style patch table where each patch is stored as:
             width\n

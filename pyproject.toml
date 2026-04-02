@@ -3,7 +3,7 @@ name = "patchmatcher"
 version = "1.0.0"
 description = "Modern Python re-implementation of the Alphacam Patch-Matcher plugin."
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 authors = [
     { name = "Giorgio" }
 ]

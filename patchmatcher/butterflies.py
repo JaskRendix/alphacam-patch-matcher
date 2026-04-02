@@ -1,7 +1,30 @@
 from dataclasses import dataclass
+from pathlib import Path
+
+import tomllib
+
+REQUIRED_FIELDS = {
+    "diam1",
+    "diam2",
+    "circ_offset",
+    "line1",
+    "offset",
+    "angle",
+    "z_bottom",
+    "radius1",
+    "radius2",
+}
 
 
-@dataclass
+def validate_butterfly_section(code: str, params: dict) -> None:
+    missing = REQUIRED_FIELDS - params.keys()
+    if missing:
+        raise ValueError(
+            f"Butterfly {code} missing fields: {', '.join(sorted(missing))}"
+        )
+
+
+@dataclass(frozen=True)
 class ButterflyParams:
     diam1: float
     diam2: float
@@ -13,25 +36,28 @@ class ButterflyParams:
     radius1: float
     radius2: float
 
+    def __post_init__(self) -> None:
+        for field, value in self.__dict__.items():
+            if not isinstance(value, (int, float)):
+                raise TypeError(f"{field} must be a number, got {value!r}")
 
-# Extracted from Geometries.bas (W1-W7, B1-B2)
-BUTTERFLY_TABLE: dict[str, ButterflyParams] = {
-    "W1": ButterflyParams(0.05, 0.05, 0.35, 0.63279, 0.20458, 9, -0.5, 0, 0),
-    "W2": ButterflyParams(0.05, 0.05, 0.35, 0.75935, 0.26708, 9, -0.5, 0, 0),
-    "W3": ButterflyParams(0.05, 0.05, 0.60, 1.01247, 0.30823, 9, -0.5, 0, 0),
-    "W4": ButterflyParams(0.05, 0.05, 0.60, 1.13902, 0.39364, 9, -0.5, 0, 0),
-    "W5": ButterflyParams(0.05, 0.05, 0.975, 1.51870, 0.39985, 9, -0.5, 0, 0),
-    "W6": ButterflyParams(0.05, 0.05, 1.475, 2.02493, 0.49146, 9, -0.5, 0, 0),
-    "W7": ButterflyParams(0.05, 0.05, 2.118, 2.66699, 0.47879, 7.77074, -0.5, 0, 0),
-    "B1": ButterflyParams(
-        0.05, 0.25, 1.000, 1.39837, 0.36335, 7.944815, -0.7, 0, 0.368
-    ),
-    "B2": ButterflyParams(0.05, 0.25, 1.374, 1.89837, 0.38002, 8.25281, -0.7, 0, 0.362),
-}
+
+def load_butterfly_table(path: str) -> dict[str, ButterflyParams]:
+    data = tomllib.loads(Path(path).read_text())
+    table = {}
+
+    for code, params in data.items():
+        validate_butterfly_section(code, params)
+        table[code] = ButterflyParams(**params)
+
+    return table
+
+
+BUTTERFLY_TABLE = load_butterfly_table("config/butterflies.toml")
 
 
 def get_butterfly_params(code: str) -> ButterflyParams:
-    """
-    Retrieve parametric butterfly definition (W1-W7, B1-B2).
-    """
-    return BUTTERFLY_TABLE[code]
+    try:
+        return BUTTERFLY_TABLE[code]
+    except KeyError:
+        raise ValueError(f"Unknown butterfly code: {code}")

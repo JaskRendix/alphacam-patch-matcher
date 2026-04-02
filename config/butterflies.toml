@@ -1,0 +1,100 @@
+# Extracted from Geometries.bas (W1–W7, B1–B2)
+
+[W1]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.35
+line1 = 0.63279
+offset = 0.20458
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W2]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.35
+line1 = 0.75935
+offset = 0.26708
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W3]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.60
+line1 = 1.01247
+offset = 0.30823
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W4]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.60
+line1 = 1.13902
+offset = 0.39364
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W5]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.975
+line1 = 1.51870
+offset = 0.39985
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W6]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 1.475
+line1 = 2.02493
+offset = 0.49146
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[W7]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 2.118
+line1 = 2.66699
+offset = 0.47879
+angle = 7.77074
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+
+[B1]
+diam1 = 0.05
+diam2 = 0.25
+circ_offset = 1.000
+line1 = 1.39837
+offset = 0.36335
+angle = 7.944815
+z_bottom = -0.7
+radius1 = 0
+radius2 = 0.368
+
+[B2]
+diam1 = 0.05
+diam2 = 0.25
+circ_offset = 1.374
+line1 = 1.89837
+offset = 0.38002
+angle = 8.25281
+z_bottom = -0.7
+radius1 = 0
+radius2 = 0.362
