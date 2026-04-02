@@ -3,13 +3,13 @@ import json
 from pathlib import Path
 
 from .butterflies import get_butterfly_params
-from .geometry import Rectangle
+from .geometry import Circle, Rectangle
 from .matching import closest_patch, replace_geometry
 from .svg import scene_to_svg
 from .tables import load_patch_table
 
 
-def load_json_input(path: Path):
+def load_json_input(path: Path) -> Rectangle:
     data = json.loads(path.read_text())
     return Rectangle(
         width=data["width"],
@@ -19,7 +19,7 @@ def load_json_input(path: Path):
     )
 
 
-def write_json_output(path: Path, rect: Rectangle, hole):
+def write_json_output(path: Path, rect: Rectangle, hole: Circle) -> None:
     out = {
         "rectangle": {
             "width": rect.width,
@@ -36,7 +36,7 @@ def write_json_output(path: Path, rect: Rectangle, hole):
     path.write_text(json.dumps(out, indent=2))
 
 
-def write_dxf(path: Path, rect: Rectangle, hole):
+def write_dxf(path: Path, rect: Rectangle, hole) -> None:
     x1 = rect.cx - rect.width / 2
     y1 = rect.cy - rect.height / 2
     x2 = rect.cx + rect.width / 2
@@ -88,13 +88,13 @@ EOF
     path.write_text(dxf)
 
 
-def cmd_match(args):
+def cmd_match(args) -> None:
     patches = load_patch_table(args.table)
     w, h = closest_patch(args.width, args.height, patches)
     print(f"Matched patch: {w} x {h}")
 
 
-def cmd_replace(args):
+def cmd_replace(args) -> None:
     patches = load_patch_table(args.table)
 
     # JSON input overrides CLI geometry
@@ -141,14 +141,14 @@ def cmd_replace(args):
     print(f"Center hole: radius {hole.radius} at ({hole.cx}, {hole.cy})")
 
 
-def cmd_butterfly(args):
+def cmd_butterfly(args) -> None:
     params = get_butterfly_params(args.code)
     print(f"Butterfly {args.code}:")
     for field, value in params.__dict__.items():
         print(f"  {field}: {value}")
 
 
-def build_parser():
+def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="patchmatcher",
         description="Patch matching, geometry replacement, and butterfly lookup.",
@@ -195,7 +195,7 @@ def build_parser():
     return parser
 
 
-def main():
+def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
     args.func(args)

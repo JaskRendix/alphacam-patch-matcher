@@ -9,7 +9,7 @@ class Rectangle:
     cy: float
 
     @property
-    def bounds(self):
+    def bounds(self) -> tuple[float, float, float, float]:
         return (
             self.cx - self.width / 2,
             self.cy - self.height / 2,

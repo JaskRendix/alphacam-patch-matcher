@@ -25,7 +25,7 @@ def replace_geometry(
     patches: list[PatchSize],
     x_adjust: float = 0.0,
     y_adjust: float = 0.0,
-):
+) -> tuple[Rectangle, Circle]:
     """
     Replace a geometry with the closest patch rectangle.
     Returns:
