@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .butterflies import get_butterfly_params
 from .geometry import Circle, Rectangle
-from .matching import closest_patch, replace_geometry
+from .matching import PatchMatcher
 from .svg import scene_to_svg
 from .tables import PatchTable
 
@@ -90,12 +90,14 @@ EOF
 
 def cmd_match(args) -> None:
     patches = PatchTable.from_file(args.table)
-    patch = closest_patch(args.width, args.height, patches)
+    matcher = PatchMatcher(patches)
+    patch = matcher.closest_patch(args.width, args.height)
     print(f"Matched patch: {patch.width} x {patch.height}")
 
 
 def cmd_replace(args) -> None:
     patches = PatchTable.from_file(args.table)
+    matcher = PatchMatcher(patches)
 
     # JSON input overrides CLI geometry
     if args.json_in:
@@ -108,9 +110,8 @@ def cmd_replace(args) -> None:
             cy=args.cy,
         )
 
-    new_rect, hole = replace_geometry(
+    new_rect, hole = matcher.replace_geometry(
         rect,
-        patches,
         x_adjust=args.x_adjust,
         y_adjust=args.y_adjust,
     )

@@ -1,12 +1,13 @@
 from patchmatcher.geometry import Rectangle
-from patchmatcher.matching import replace_geometry
+from patchmatcher.matching import PatchMatcher
 from patchmatcher.tables import PatchTable
 
 patches = PatchTable.from_file("config/patchSizesTop.txt")
+matcher = PatchMatcher(patches)
 
 geo = Rectangle(width=3.1, height=4.9, cx=10, cy=20)
 
-new_rect, hole = replace_geometry(geo, patches)
+new_rect, hole = matcher.replace_geometry(geo)
 
 print("Original:", geo)
 print("Matched patch:", new_rect)

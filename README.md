@@ -1,10 +1,10 @@
-# Patch‑Matcher
+# Patch-Matcher
 
-Modern Python rewrite of the original VB6 Patch‑Matcher plugin for Alphacam.  
+Modern Python rewrite of the original VB6 Patch-Matcher plugin for Alphacam.  
 The original repository is here: https://github.com/PCipolle/Patch-Matcher  
-The VB6 version had no license; this project is a clean re‑implementation based on observed behavior and data files.
+The VB6 version had no license; this project is a clean re-implementation based on observed behavior and data files.
 
-This project extracts the CNC‑relevant logic from the legacy plugin and reorganizes it into a maintainable, testable Python package.
+This project extracts the CNC-relevant logic from the legacy plugin and reorganizes it into a maintainable, testable Python package.
 
 ---
 
@@ -24,9 +24,9 @@ This rewrite preserves those behaviors without Alphacam dependencies.
 
 - Patch size tables (top, bottom, wood, bronze)  
 - Butterfly dimension tables (W1-W7, B1-B2)  
-- Closest‑patch matching rules  
+- Closest-patch matching rules  
 - Rectangle replacement rules  
-- Center‑hole placement  
+- Center-hole placement  
 - Angle and offset logic  
 
 All logic was rewritten in Python.  
@@ -43,7 +43,7 @@ The following elements were specific to Alphacam and were intentionally excluded
 - Toolpath generation  
 - Tool libraries  
 - Event handling  
-- Machine‑specific settings  
+- Machine-specific settings  
 
 The goal is a clean, portable logic layer.
 
@@ -58,7 +58,7 @@ examples/            # Usage demonstrations
 tests/               # Full pytest suite
 ```
 
-This project is a clean re‑implementation. No VB6 source code is included or reused.
+This project is a clean re-implementation. No VB6 source code is included or reused.
 
 ---
 
@@ -129,10 +129,10 @@ It fits your existing structure and keeps the tone consistent with the rest of t
 
 ---
 
-## Command‑Line Interface (CLI)
+## Command-Line Interface (CLI)
 
-Patch‑Matcher includes a lightweight command‑line interface that exposes the core functionality of the library without writing any Python code.  
-Once the package is installed, the `patchmatcher` command becomes available system‑wide.
+Patch-Matcher includes a lightweight command-line interface that exposes the core functionality of the library without writing any Python code.  
+Once the package is installed, the `patchmatcher` command becomes available system-wide.
 
 ### Installation (editable or local)
 
@@ -229,8 +229,8 @@ python -m patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesT
 
 ## JSON and DXF Output
 
-Patch‑Matcher can be used as part of automated CNC workflows by reading geometry from JSON files and exporting results in either JSON or DXF format.  
-These options integrate cleanly with external preprocessors, CAM pipelines, or batch‑processing scripts.
+Patch-Matcher can be used as part of automated CNC workflows by reading geometry from JSON files and exporting results in either JSON or DXF format.  
+These options integrate cleanly with external preprocessors, CAM pipelines, or batch-processing scripts.
 
 ### JSON input
 
@@ -251,7 +251,7 @@ Run the replacement using:
 patchmatcher replace --json-in input.json --table config/patchSizesTop.txt
 ```
 
-This performs the same patch‑matching and geometry replacement as the standard CLI call.
+This performs the same patch-matching and geometry replacement as the standard CLI call.
 
 ---
 
@@ -269,7 +269,7 @@ patchmatcher replace \
     --json-out result.json
 ```
 
-The output file contains the new rectangle and center‑hole geometry:
+The output file contains the new rectangle and center-hole geometry:
 
 ```json
 {
@@ -293,7 +293,7 @@ This format is suitable for downstream automation or integration with CNC toolpa
 
 ### DXF export
 
-Patch‑Matcher can also export the replaced geometry as a minimal DXF file containing:
+Patch-Matcher can also export the replaced geometry as a minimal DXF file containing:
 
 - a rectangular LWPOLYLINE  
 - a circular center hole  
@@ -316,7 +316,7 @@ The resulting DXF can be imported into CAD/CAM software or used as part of a CNC
 
 ### SVG export
 
-For quick visual inspection or documentation, Patch‑Matcher can export the replaced geometry as an SVG:
+For quick visual inspection or documentation, Patch-Matcher can export the replaced geometry as an SVG:
 
 ```bash
 patchmatcher replace \
