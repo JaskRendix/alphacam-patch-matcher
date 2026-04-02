@@ -1,8 +1,8 @@
 from patchmatcher.geometry import Rectangle
 from patchmatcher.matching import replace_geometry
-from patchmatcher.tables import load_patch_table
+from patchmatcher.tables import PatchTable
 
-patches = load_patch_table("config/patchSizesTop.txt")
+patches = PatchTable.from_file("config/patchSizesTop.txt")
 
 geo = Rectangle(width=3.1, height=4.9, cx=10, cy=20)
 

@@ -1,24 +1,45 @@
+from collections.abc import Iterable, Iterator
+from dataclasses import dataclass
 from pathlib import Path
 
-PatchSize = tuple[float, float]
+
+@dataclass(frozen=True)
+class Patch:
+    width: float
+    height: float
 
 
-def load_patch_table(path: str | Path) -> list[PatchSize]:
+class PatchTable:
     """
-    Load a VB6-style patch table where each patch is stored as:
-        width\n
-        height\n
+    Represents a table of patch sizes extracted from legacy VB6 data files.
+    Each patch consists of a width/height pair.
     """
-    path = Path(path)
-    lines = [l.strip() for l in path.read_text().splitlines() if l.strip()]
 
-    if len(lines) % 2 != 0:
-        raise ValueError(f"Expected an even number of lines in {path}")
+    def __init__(self, patches: Iterable[Patch]):
+        self.patches = list(patches)
 
-    patches = []
-    for i in range(0, len(lines), 2):
-        w = float(lines[i])
-        h = float(lines[i + 1])
-        patches.append((w, h))
+    @classmethod
+    def from_file(cls, path: str | Path) -> "PatchTable":
+        """
+        Load a VB6-style patch table where each patch is stored as:
+            width\n
+            height\n
 
-    return patches
+        The file must contain an even number of non-empty lines.
+        """
+        path = Path(path)
+        lines = [l.strip() for l in path.read_text().splitlines() if l.strip()]
+
+        if len(lines) % 2 != 0:
+            raise ValueError(f"Expected an even number of lines in {path}")
+
+        patches = [
+            Patch(float(lines[i]), float(lines[i + 1])) for i in range(0, len(lines), 2)
+        ]
+        return cls(patches)
+
+    def __len__(self) -> int:
+        return len(self.patches)
+
+    def __iter__(self) -> Iterator[Patch]:
+        return iter(self.patches)

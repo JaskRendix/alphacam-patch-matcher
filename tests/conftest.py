@@ -1,12 +1,12 @@
 import pytest
 
 from patchmatcher.geometry import Rectangle
-from patchmatcher.tables import load_patch_table
+from patchmatcher.tables import PatchTable
 
 
 @pytest.fixture
 def top_patches():
-    return load_patch_table("config/patchSizesTop.txt")
+    return PatchTable.from_file("config/patchSizesTop.txt")
 
 
 @pytest.fixture

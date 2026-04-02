@@ -1,14 +1,13 @@
-from patchmatcher.geometry import Rectangle
 from patchmatcher.matching import closest_patch, replace_geometry
 
 
 def test_closest_patch(top_patches):
     # Pick a size close to an existing patch
-    w, h = closest_patch(3.1, 4.9, top_patches)
+    patch = closest_patch(3.1, 4.9, top_patches)
 
     # Should match a real patch from the table
-    assert isinstance(w, float)
-    assert isinstance(h, float)
+    assert isinstance(patch.width, float)
+    assert isinstance(patch.height, float)
 
 
 def test_replace_geometry(top_patches, sample_rect):

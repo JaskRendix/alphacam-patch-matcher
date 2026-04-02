@@ -6,7 +6,7 @@ from .butterflies import get_butterfly_params
 from .geometry import Circle, Rectangle
 from .matching import closest_patch, replace_geometry
 from .svg import scene_to_svg
-from .tables import load_patch_table
+from .tables import PatchTable
 
 
 def load_json_input(path: Path) -> Rectangle:
@@ -89,13 +89,13 @@ EOF
 
 
 def cmd_match(args) -> None:
-    patches = load_patch_table(args.table)
-    w, h = closest_patch(args.width, args.height, patches)
-    print(f"Matched patch: {w} x {h}")
+    patches = PatchTable.from_file(args.table)
+    patch = closest_patch(args.width, args.height, patches)
+    print(f"Matched patch: {patch.width} x {patch.height}")
 
 
 def cmd_replace(args) -> None:
-    patches = load_patch_table(args.table)
+    patches = PatchTable.from_file(args.table)
 
     # JSON input overrides CLI geometry
     if args.json_in:
