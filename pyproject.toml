@@ -9,7 +9,13 @@ authors = [
 ]
 license = { file = "LICENSE" }
 
-dependencies = []
+[project.optional-dependencies]
+api = [
+    "fastapi",
+    "uvicorn",
+    "httpx",
+    "pydantic"
+]
 
 [project.urls]
 Homepage = "https://github.com/JaskRendix/alphacam-patch-matcher"
@@ -22,8 +28,12 @@ patchmatcher = "patchmatcher.__main__:main"
 requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["patchmatcher*"]
+
 [tool.setuptools]
-packages = ["patchmatcher"]
+include-package-data = true
 
 [tool.pytest.ini_options]
 pythonpath = "."

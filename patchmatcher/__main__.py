@@ -1,91 +1,32 @@
 import argparse
-import json
 from pathlib import Path
 
 from .butterflies import get_butterfly_params, load_butterfly_table
-from .geometry import Circle, Rectangle
+from .geometry import Rectangle
+from .io import load_json_input, write_dxf, write_json_output
 from .matching import PatchMatcher
 from .svg import scene_to_svg
 from .tables import PatchTable
 
+try:
+    import uvicorn
+except ImportError:
+    uvicorn = None
 
-def load_json_input(path: Path) -> Rectangle:
-    data = json.loads(path.read_text())
-    return Rectangle(
-        width=data["width"],
-        height=data["height"],
-        cx=data["cx"],
-        cy=data["cy"],
+
+def cmd_serve(args):
+    if uvicorn is None:
+        raise SystemExit(
+            "FastAPI/uvicorn not installed. Install with:\n"
+            "  pip install 'patchmatcher[api]'"
+        )
+
+    uvicorn.run(
+        "patchmatcher.api:app",
+        host=args.host,
+        port=args.port,
+        reload=args.reload,
     )
-
-
-def write_json_output(path: Path, rect: Rectangle, hole: Circle) -> None:
-    out = {
-        "rectangle": {
-            "width": rect.width,
-            "height": rect.height,
-            "cx": rect.cx,
-            "cy": rect.cy,
-        },
-        "center_hole": {
-            "radius": hole.radius,
-            "cx": hole.cx,
-            "cy": hole.cy,
-        },
-    }
-    path.write_text(json.dumps(out, indent=2))
-
-
-def write_dxf(path: Path, rect: Rectangle, hole) -> None:
-    x1 = rect.cx - rect.width / 2
-    y1 = rect.cy - rect.height / 2
-    x2 = rect.cx + rect.width / 2
-    y2 = rect.cy + rect.height / 2
-
-    dxf = f"""0
-SECTION
-2
-ENTITIES
-0
-LWPOLYLINE
-8
-0
-90
-4
-70
-1
-10
-{x1}
-20
-{y1}
-10
-{x2}
-20
-{y1}
-10
-{x2}
-20
-{y2}
-10
-{x1}
-20
-{y2}
-0
-CIRCLE
-8
-0
-10
-{hole.cx}
-20
-{hole.cy}
-40
-{hole.radius}
-0
-ENDSEC
-0
-EOF
-"""
-    path.write_text(dxf)
 
 
 def cmd_match(args) -> None:
@@ -215,6 +156,16 @@ def build_parser() -> argparse.ArgumentParser:
     p_bfly.add_argument("--table", type=Path, help="Path to butterfly TOML file")
     p_bfly.set_defaults(func=cmd_butterfly)
 
+    # serve
+    p_serve = sub.add_parser(
+        "serve", help="Start the FastAPI server (requires the [api] extra)."
+    )
+    p_serve.add_argument("--host", default="127.0.0.1")
+    p_serve.add_argument("--port", type=int, default=8000)
+    p_serve.add_argument(
+        "--reload", action="store_true", help="Enable auto-reload (development only)."
+    )
+    p_serve.set_defaults(func=cmd_serve)
     return parser
 
 
