@@ -1,172 +1,132 @@
-# Patch-Matcher
+# **patchmatcher**
 
-Modern Python rewrite of the original VB6 Patch-Matcher plugin for Alphacam.  
-The original repository is here: https://github.com/PCipolle/Patch-Matcher  
-The VB6 version had no license; this project is a clean re-implementation based on observed behavior and data files.
+A modern Python rewrite of the legacy *Patch‑Matcher* Alphacam macro.
 
-This project extracts the CNC-relevant logic from the legacy plugin and reorganizes it into a maintainable, testable Python package.
+This project extracts the CNC‑relevant logic from the original VB6 plugin:
 
----
+https://github.com/PCipolle/Patch-Matcher
 
-## Purpose
+The original implementation depended on Alphacam COM automation, VB6 forms, and proprietary macro packaging.  
+This rewrite isolates the useful geometry logic and exposes it as a clean, testable Python library with a CLI and optional HTTP API.
 
-The original Alphacam plugin automated three tasks used in woodworking and CNC routing:
-
-1. Patch selection based on rectangle size  
-2. Geometry replacement with a matched patch and center hole  
-3. Butterfly inlay generation using fixed dimension tables  
-
-This rewrite preserves those behaviors without Alphacam dependencies.
+No VB6 code is reused.  
+All behavior is re‑implemented from observed inputs, outputs, and data tables.
 
 ---
 
-## What was extracted
+## **Purpose**
 
-- Patch size tables (top, bottom, wood, bronze)  
-- Butterfly dimension tables (W1-W7, B1-B2)  
-- Closest-patch matching rules  
-- Rectangle replacement rules  
-- Center-hole placement  
-- Angle and offset logic  
+The original Patch‑Matcher automated three tasks used in woodworking and CNC routing:
 
-All logic was rewritten in Python.  
-No VB6 code was copied.
+1. Selecting the closest patch size for a given rectangle  
+2. Replacing geometry with the matched patch and center hole  
+3. Looking up butterfly inlay parameters (W1–W7, B1–B2)
+
+This project preserves those behaviors without Alphacam dependencies.
 
 ---
 
-## What was not included
+## **What this project contains**
 
-The following elements were specific to Alphacam and were intentionally excluded:
+### **Geometry model**
+Simple primitives used by the matching logic:
 
-- COM API calls  
+- `Rectangle(width, height, cx, cy)`  
+- `Circle(radius, cx, cy)`
+
+These match how the original plugin treated geometry.
+
+### **Patch tables**
+The VB6 plugin used flat numeric tables for patch sizes.  
+These are preserved under `config/` and parsed by:
+
+- `PatchTable.from_file()`
+
+### **Matching logic**
+A faithful rewrite of the closest‑patch selection rules:
+
+- Euclidean distance in width/height space  
+- deterministic tie‑breaking  
+- optional X/Y adjustments
+
+### **Replacement logic**
+Given an input rectangle:
+
+- find the closest patch  
+- create a new rectangle  
+- compute the center hole  
+- apply optional offsets
+
+### **Butterfly parameters**
+The W1–W7 and B1–B2 inlay definitions are included as structured data.  
+Custom TOML tables are supported.
+
+### **Exporters**
+Minimal DXF and SVG exporters for:
+
+- rectangles  
+- center holes  
+
+Useful for inspection or downstream CAM pipelines.
+
+### **CLI**
+A command‑line interface exposing:
+
+- `match`  
+- `replace`  
+- `butterfly`  
+- `serve` (API server)
+
+### **API**
+An optional FastAPI server that mirrors the CLI functionality.
+
+---
+
+## **What this project does not include**
+
+The following Alphacam‑specific elements are intentionally excluded:
+
+- COM automation (`Drw`, `Geo`, `App`)  
 - VB6 UI forms  
-- Toolpath generation  
-- Tool libraries  
-- Event handling  
-- Machine-specific settings  
+- toolpath generation  
+- layer visibility  
+- machine‑specific settings  
+- `.amb` macro packaging  
 
-The goal is a clean, portable logic layer.
-
----
-
-## Project structure
-
-```
-patchmatcher/        # Modern Python implementation
-config/              # Patch tables and butterfly definitions
-examples/            # Usage demonstrations
-tests/               # Full pytest suite
-```
-
-This project is a clean re-implementation. No VB6 source code is included or reused.
+The goal is a portable logic layer, not a CAM system.
 
 ---
 
-## CNC workflow diagram
+## **Installation**
 
-```mermaid
-flowchart TD
+### CLI only
+```
+pip install patchmatcher # not yet published to PyPI
+```
 
-    A[Legacy Alphacam VB6 Plugin] --> B[Extract Patch Tables]
-    A --> C[Extract Butterfly Dimensions]
-    A --> D[Extract Matching Rules]
-    A --> E[Extract Replacement Rules]
+### CLI + API
+```
+pip install "patchmatcher[api]" # not yet published to PyPI
+```
 
-    B --> F[tables.py]
-    C --> G[butterflies.py]
-    D --> H[matching.py]
-    E --> I[geometry.py]
-
-    F --> J[Automated Tests]
-    G --> J
-    H --> J
-    I --> J
-
-    J --> K[Examples]
-
-    K --> L[Optional CAM Output<br>DXF Export / Toolpath Prep]
-
-    L --> M[Usable in CNC Automation Pipelines]
+### Development install
+```
+pip install -e .[api]
 ```
 
 ---
 
-## Tests
+## **CLI usage**
 
-The project includes a complete pytest suite covering:
-
-- patch table loading  
-- geometry primitives  
-- matching logic  
-- butterfly parameter lookup  
-- example execution  
-
-All tests pass.
-
----
-
-## How to run the examples
-
-The examples are regular Python modules.  
-Run them from the project root so the `patchmatcher` package can be imported correctly.
-
-### Run an example
-
+### **Find the closest patch**
 ```
-python -m examples.demo_search_and_replace
+patchmatcher match \
+    --width 3.1 \
+    --height 4.9 \
+    --table config/patchSizesTop.txt
 ```
 
-### Expected output
-
-```
-Original: Rectangle(width=3.1, height=4.9, cx=10, cy=20)
-Matched patch: Rectangle(width=3.0, height=5.0, cx=10, cy=20)
-Center hole: Circle(radius=0.05, cx=10, cy=20)
-```
-
-Here’s a clean, polished **CLI section** you can drop directly into your README.  
-It fits your existing structure and keeps the tone consistent with the rest of the document.
-
----
-
-## Command-Line Interface (CLI)
-
-Patch-Matcher includes a lightweight command-line interface that exposes the core functionality of the library without writing any Python code.  
-Once the package is installed, the `patchmatcher` command becomes available system-wide.
-
-### Installation (editable or local)
-
-```
-pip install .
-```
-
-After installation, the following commands are available.
-
----
-
-### `match` — Find the closest patch
-
-Given a rectangle width and height, this command searches the selected patch table and returns the closest matching patch size.
-
-```
-patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesTop.txt
-```
-
-**Output:**
-
-```
-Matched patch: 3.0 x 5.0
-```
-
----
-
-### `replace` — Replace geometry with a matched patch
-
-This performs the full geometry replacement:  
-- finds the closest patch  
-- creates a new rectangle  
-- generates the center hole  
-
+### **Replace geometry**
 ```
 patchmatcher replace \
     --width 3.1 \
@@ -176,130 +136,12 @@ patchmatcher replace \
     --table config/patchSizesTop.txt
 ```
 
-**Output:**
-
-```
-New rectangle: 3.0 x 5.0 at (10.0, 20.0)
-Center hole: radius 0.05 at (10.0, 20.0)
-```
-
-Optional adjustments:
-
-```
---x-adjust 0.1
---y-adjust 0.2
-```
-
----
-
-### `butterfly` — Lookup butterfly inlay parameters
-
-Retrieves the parametric definition for any butterfly code (W1–W7, B1–B2).
-
+### **Lookup butterfly parameters**
 ```
 patchmatcher butterfly W3
 ```
 
-**Output:**
-
-```
-Butterfly W3:
-  diam1: 0.05
-  diam2: 0.05
-  circ_offset: 0.60
-  line1: 1.01247
-  offset: 0.30823
-  angle: 9
-  z_bottom: -0.5
-  radius1: 0
-  radius2: 0
-```
-
----
-
-### Running the CLI without installation
-
-You can also invoke the CLI directly from the project root:
-
-```
-python -m patchmatcher match --width 3.1 --height 4.9 --table config/patchSizesTop.txt
-```
-
----
-
-## JSON and DXF Output
-
-Patch-Matcher can be used as part of automated CNC workflows by reading geometry from JSON files and exporting results in either JSON or DXF format.  
-These options integrate cleanly with external preprocessors, CAM pipelines, or batch-processing scripts.
-
-### JSON input
-
-Instead of specifying geometry on the command line, you can provide a JSON file:
-
-```json
-{
-  "width": 3.1,
-  "height": 4.9,
-  "cx": 10,
-  "cy": 20
-}
-```
-
-Run the replacement using:
-
-```
-patchmatcher replace --json-in input.json --table config/patchSizesTop.txt
-```
-
-This performs the same patch-matching and geometry replacement as the standard CLI call.
-
----
-
-### JSON output
-
-To write the result to a JSON file:
-
-```
-patchmatcher replace \
-    --width 3.1 \
-    --height 4.9 \
-    --cx 10 \
-    --cy 20 \
-    --table config/patchSizesTop.txt \
-    --json-out result.json
-```
-
-The output file contains the new rectangle and center-hole geometry:
-
-```json
-{
-  "rectangle": {
-    "width": 3.0,
-    "height": 5.0,
-    "cx": 10.0,
-    "cy": 20.0
-  },
-  "center_hole": {
-    "radius": 0.05,
-    "cx": 10.0,
-    "cy": 20.0
-  }
-}
-```
-
-This format is suitable for downstream automation or integration with CNC toolpath generators.
-
----
-
-### DXF export
-
-Patch-Matcher can also export the replaced geometry as a minimal DXF file containing:
-
-- a rectangular LWPOLYLINE  
-- a circular center hole  
-
-Example:
-
+### **DXF export**
 ```
 patchmatcher replace \
     --width 3.1 \
@@ -310,15 +152,8 @@ patchmatcher replace \
     --dxf-out output.dxf
 ```
 
-The resulting DXF can be imported into CAD/CAM software or used as part of a CNC preprocessing pipeline.
-
----
-
-### SVG export
-
-For quick visual inspection or documentation, Patch-Matcher can export the replaced geometry as an SVG:
-
-```bash
+### **SVG export**
+```
 patchmatcher replace \
     --width 3.1 \
     --height 4.9 \
@@ -328,9 +163,109 @@ patchmatcher replace \
     --svg-out output.svg
 ```
 
-The generated SVG contains:
+### **JSON input/output**
+```
+patchmatcher replace \
+    --json-in input.json \
+    --table config/patchSizesTop.txt \
+    --json-out result.json
+```
 
-- the matched rectangle outline  
-- the center hole as a circle (in a contrasting stroke color)  
+---
 
-This is useful for validating patch selection and geometry replacement without opening a full CAD/CAM system.
+## **API usage**
+
+Start the server:
+
+```
+patchmatcher serve --reload
+```
+
+Or manually:
+
+```
+uvicorn patchmatcher.api:app --reload
+```
+
+Interactive docs:
+
+- Swagger UI → http://localhost:8000/docs  
+- ReDoc → http://localhost:8000/redoc  
+
+---
+
+## **Endpoints**
+
+| Method | Path | Description |
+|--------|------|-------------|
+| **POST** | `/match` | Find closest patch |
+| **POST** | `/replace` | Replace geometry and return JSON |
+| **GET** | `/replace/dxf` | Return DXF as text |
+| **GET** | `/replace/svg` | Return SVG as text |
+| **GET** | `/butterfly/{code}` | Lookup butterfly parameters |
+
+---
+
+## **Request formats**
+
+### `/match`
+Query parameters:
+
+```
+width=3.1
+height=4.9
+table=config/patchSizesTop.txt
+```
+
+### `/replace`
+```json
+{
+  "width": 3.1,
+  "height": 4.9,
+  "cx": 10,
+  "cy": 20,
+  "table_path": "config/patchSizesTop.txt"
+}
+```
+
+### `/butterfly/{code}`
+```
+GET /butterfly/W3
+```
+
+---
+
+## **Examples**
+
+### Replace geometry via API
+```
+curl -X POST http://localhost:8000/replace \
+     -H "Content-Type: application/json" \
+     -d '{"width":3.1,"height":4.9,"cx":10,"cy":20}'
+```
+
+### Export DXF via API
+```
+curl "http://localhost:8000/replace/dxf?width=3.1&height=4.9&cx=10&cy=20" \
+     -o output.dxf
+```
+
+---
+
+## **Tests**
+
+```
+pytest
+```
+
+The test suite covers:
+
+- patch table parsing  
+- matching logic  
+- geometry replacement  
+- butterfly lookup  
+- DXF/SVG exporters  
+- CLI commands  
+- API endpoints  
+
+All tests pass.
