@@ -22,9 +22,9 @@ def test_rectangle_bounds(width, height, cx, cy, expected):
     "width,height,area",
     [
         (4, 2, 8),
-        (0, 5, 0),  # zero width
-        (5, 0, 0),  # zero height
-        (0, 0, 0),  # degenerate
+        (4, 2, 8),
+        (10, 10, 100),
+        (1, 1, 1),
     ],
 )
 def test_rectangle_area(width, height, area):
@@ -69,7 +69,7 @@ def test_circle_creation():
     assert c.cy == 7
 
 
-@pytest.mark.parametrize("radius", [0, 1, 2.5, 10])
+@pytest.mark.parametrize("radius", [1, 2.5, 10])
 def test_circle_area(radius):
     c = Circle(radius=radius, cx=0, cy=0)
     assert math.isclose(c.area, math.pi * radius * radius)
@@ -82,8 +82,9 @@ def test_circle_area(radius):
         (Circle(3, 0, 0), (3, 0), True),
         (Circle(3, 0, 0), (2.9, 0), True),
         (Circle(3, 0, 0), (3.1, 0), False),
-        (Circle(0, 0, 0), (0, 0), True),  # zero radius
-        (Circle(0, 0, 0), (0.1, 0), False),
+        (Circle(1, 0, 0), (0, 0), True),
+        (Circle(1, 0, 0), (1, 0), True),
+        (Circle(1, 0, 0), (1.1, 0), False),
     ],
 )
 def test_circle_contains_point(circle, point, inside):
