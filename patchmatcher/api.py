@@ -7,14 +7,14 @@ from pydantic import BaseModel
 
 from .butterflies import get_butterfly_params, load_butterfly_table
 from .geometry import Rectangle
-from .io import write_dxf
-from .matching import PatchMatcher
+from .io import dxf_to_string
+from .matching import MatchResult, PatchMatcher
 from .svg import scene_to_svg
 from .tables import PatchTable
 
 app = FastAPI(
     title="PatchMatcher API",
-    version="1.0.0",
+    version="1.1.0",
     description="REST API for patch matching, geometry replacement, and butterfly lookup.",
 )
 
@@ -30,6 +30,8 @@ class ReplaceRequest(GeometryIn):
     table_path: str = "config/patchSizesTop.txt"
     x_adjust: float = 0.0
     y_adjust: float = 0.0
+    hole_radius: float = 0.05
+    diagnostics: bool = False
 
 
 class RectangleOut(BaseModel):
@@ -45,21 +47,43 @@ class CircleOut(BaseModel):
     cy: float
 
 
+class MatchDiagnostics(BaseModel):
+    distance: float
+    percentile: float
+    confidence: float
+
+
 class ReplaceResponse(BaseModel):
     rectangle: RectangleOut
     center_hole: CircleOut
+    diagnostics: Optional[MatchDiagnostics] = None
 
 
 @app.post("/match", tags=["Matching"])
 async def match_patch(
-    width: float, height: float, table: str = "config/patchSizesTop.txt"
+    width: float,
+    height: float,
+    table: str = "config/patchSizesTop.txt",
+    diagnostics: bool = False,
 ):
     """Equivalent to: patchmatcher match --width X --height Y --table FILE"""
     try:
         patches = PatchTable.from_file(Path(table))
         matcher = PatchMatcher(patches)
+
+        if diagnostics:
+            result: MatchResult = matcher.closest_patch_with_metrics(width, height)
+            return {
+                "matched_width": result.patch.width,
+                "matched_height": result.patch.height,
+                "distance": result.distance,
+                "percentile": result.percentile,
+                "confidence": 1 - result.percentile,
+            }
+
         patch = matcher.closest_patch(width, height)
         return {"matched_width": patch.width, "matched_height": patch.height}
+
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -78,11 +102,27 @@ async def replace_geometry(req: ReplaceRequest):
             cy=req.cy,
         )
 
-        new_rect, hole = matcher.replace_geometry(
-            rect,
-            x_adjust=req.x_adjust,
-            y_adjust=req.y_adjust,
-        )
+        if req.diagnostics:
+            new_rect, hole, diag = matcher.replace_geometry(
+                rect,
+                x_adjust=req.x_adjust,
+                y_adjust=req.y_adjust,
+                hole_radius=req.hole_radius,
+                diagnostics=True,
+            )
+            diag_out = MatchDiagnostics(
+                distance=diag.distance,
+                percentile=diag.percentile,
+                confidence=1 - diag.percentile,
+            )
+        else:
+            new_rect, hole = matcher.replace_geometry(
+                rect,
+                x_adjust=req.x_adjust,
+                y_adjust=req.y_adjust,
+                hole_radius=req.hole_radius,
+            )
+            diag_out = None
 
         return ReplaceResponse(
             rectangle=RectangleOut(
@@ -96,6 +136,7 @@ async def replace_geometry(req: ReplaceRequest):
                 cx=hole.cx,
                 cy=hole.cy,
             ),
+            diagnostics=diag_out,
         )
 
     except Exception as e:
@@ -111,6 +152,9 @@ async def replace_dxf(
     table: str = "config/patchSizesTop.txt",
     x_adjust: float = 0.0,
     y_adjust: float = 0.0,
+    hole_radius: float = 0.05,
+    scale: float = 1.0,
+    units: str = "in",
 ):
     """Return DXF text directly."""
     try:
@@ -118,11 +162,14 @@ async def replace_dxf(
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
-        new_rect, hole = matcher.replace_geometry(rect, x_adjust, y_adjust)
+        new_rect, hole = matcher.replace_geometry(
+            rect,
+            x_adjust=x_adjust,
+            y_adjust=y_adjust,
+            hole_radius=hole_radius,
+        )
 
-        from .io import dxf_to_string
-
-        return dxf_to_string(new_rect, hole)
+        return dxf_to_string(new_rect, hole, scale=scale, units=units)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -137,6 +184,9 @@ async def replace_svg(
     table: str = "config/patchSizesTop.txt",
     x_adjust: float = 0.0,
     y_adjust: float = 0.0,
+    hole_radius: float = 0.05,
+    scale: float = 1.0,
+    units: str = "px",
 ):
     """Return SVG text directly."""
     try:
@@ -144,10 +194,14 @@ async def replace_svg(
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
-        new_rect, hole = matcher.replace_geometry(rect, x_adjust, y_adjust)
+        new_rect, hole = matcher.replace_geometry(
+            rect,
+            x_adjust=x_adjust,
+            y_adjust=y_adjust,
+            hole_radius=hole_radius,
+        )
 
-        svg = scene_to_svg(new_rect, hole)
-        return svg
+        return scene_to_svg(new_rect, hole, scale=scale, units=units)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
