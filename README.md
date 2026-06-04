@@ -4,10 +4,10 @@ A modern Python rewrite of the legacy *Patch‑Matcher* Alphacam macro.
 
 This project extracts the CNC‑relevant logic from the original VB6 plugin:
 
-https://github.com/PCipolle/Patch-Matcher
+[https://github.com/PCipolle/Patch-Matcher](https://github.com/PCipolle/Patch-Matcher)
 
 The original implementation depended on Alphacam COM automation, VB6 forms, and proprietary macro packaging.  
-This rewrite isolates the useful geometry logic and exposes it as a clean, testable Python library with a CLI and optional HTTP API.
+This rewrite isolates the geometry and matching logic and exposes it as a clean, testable Python library with a CLI and optional HTTP API.
 
 No VB6 code is reused.  
 All behavior is re‑implemented from observed inputs, outputs, and data tables.
@@ -18,8 +18,8 @@ All behavior is re‑implemented from observed inputs, outputs, and data tables.
 
 The original Patch‑Matcher automated three tasks used in woodworking and CNC routing:
 
-1. Selecting the closest patch size for a given rectangle  
-2. Replacing geometry with the matched patch and center hole  
+1. Selecting the closest patch size for a rectangle  
+2. Replacing geometry with the matched patch and a center hole  
 3. Looking up butterfly inlay parameters (W1–W7, B1–B2)
 
 This project preserves those behaviors without Alphacam dependencies.
@@ -34,7 +34,7 @@ Simple primitives used by the matching logic:
 - `Rectangle(width, height, cx, cy)`  
 - `Circle(radius, cx, cy)`
 
-These match how the original plugin treated geometry.
+Geometry objects include strict validation for dimensions and coordinates.
 
 ### **Patch tables**
 The VB6 plugin used flat numeric tables for patch sizes.  
@@ -42,12 +42,19 @@ These are preserved under `config/` and parsed by:
 
 - `PatchTable.from_file()`
 
+Patch tables include:
+
+- numeric validation  
+- table‑wide bounds  
+- query validation for safety
+
 ### **Matching logic**
-A faithful rewrite of the closest‑patch selection rules:
+A modern rewrite of the closest‑patch selection rules:
 
 - Euclidean distance in width/height space  
 - deterministic tie‑breaking  
-- optional X/Y adjustments
+- optional diagnostics (distance, percentile, confidence)  
+- bounds checking through `PatchTable.validate_query()`
 
 ### **Replacement logic**
 Given an input rectangle:
@@ -55,19 +62,26 @@ Given an input rectangle:
 - find the closest patch  
 - create a new rectangle  
 - compute the center hole  
-- apply optional offsets
+- apply optional offsets  
+- support configurable hole radius  
+- return diagnostics when requested
 
 ### **Butterfly parameters**
 The W1–W7 and B1–B2 inlay definitions are included as structured data.  
 Custom TOML tables are supported.
 
 ### **Exporters**
-Minimal DXF and SVG exporters for:
+DXF and SVG exporters for:
 
 - rectangles  
 - center holes  
 
-Useful for inspection or downstream CAM pipelines.
+Exporters support:
+
+- scale factors  
+- unit selection  
+- correct SVG viewBox computation  
+- DRY DXF generation
 
 ### **CLI**
 A command‑line interface exposing:
@@ -77,14 +91,22 @@ A command‑line interface exposing:
 - `butterfly`  
 - `serve` (API server)
 
+CLI commands support:
+
+- diagnostics  
+- configurable hole radius  
+- DXF/SVG scale and units  
+- JSON input and output
+
 ### **API**
-An optional FastAPI server that mirrors the CLI functionality.
+A FastAPI server that mirrors the CLI functionality.  
+Endpoints support diagnostics, hole radius, scale, and units.
 
 ---
 
 ## **What this project does not include**
 
-The following Alphacam‑specific elements are intentionally excluded:
+The following Alphacam‑specific elements are excluded:
 
 - COM automation (`Drw`, `Geo`, `App`)  
 - VB6 UI forms  
@@ -101,12 +123,12 @@ The goal is a portable logic layer, not a CAM system.
 
 ### CLI only
 ```
-pip install patchmatcher # not yet published to PyPI
+pip install patchmatcher
 ```
 
 ### CLI + API
 ```
-pip install "patchmatcher[api]" # not yet published to PyPI
+pip install "patchmatcher[api]"
 ```
 
 ### Development install
@@ -126,6 +148,15 @@ patchmatcher match \
     --table config/patchSizesTop.txt
 ```
 
+### **Find the closest patch with diagnostics**
+```
+patchmatcher match \
+    --width 3.1 \
+    --height 4.9 \
+    --table config/patchSizesTop.txt \
+    --diagnostics
+```
+
 ### **Replace geometry**
 ```
 patchmatcher replace \
@@ -136,12 +167,18 @@ patchmatcher replace \
     --table config/patchSizesTop.txt
 ```
 
-### **Lookup butterfly parameters**
+### **Replace geometry with custom hole radius**
 ```
-patchmatcher butterfly W3
+patchmatcher replace \
+    --width 3.1 \
+    --height 4.9 \
+    --cx 10 \
+    --cy 20 \
+    --hole-radius 0.125 \
+    --table config/patchSizesTop.txt
 ```
 
-### **DXF export**
+### **DXF export with units**
 ```
 patchmatcher replace \
     --width 3.1 \
@@ -149,10 +186,11 @@ patchmatcher replace \
     --cx 10 \
     --cy 20 \
     --table config/patchSizesTop.txt \
-    --dxf-out output.dxf
+    --dxf-out output.dxf \
+    --hole-radius 0.125
 ```
 
-### **SVG export**
+### **SVG export with scale**
 ```
 patchmatcher replace \
     --width 3.1 \
@@ -198,10 +236,10 @@ Interactive docs:
 
 | Method | Path | Description |
 |--------|------|-------------|
-| **POST** | `/match` | Find closest patch |
-| **POST** | `/replace` | Replace geometry and return JSON |
-| **GET** | `/replace/dxf` | Return DXF as text |
-| **GET** | `/replace/svg` | Return SVG as text |
+| **POST** | `/match` | Find closest patch (supports diagnostics) |
+| **POST** | `/replace` | Replace geometry and return JSON (supports diagnostics) |
+| **GET** | `/replace/dxf` | Return DXF text (supports scale and units) |
+| **GET** | `/replace/svg` | Return SVG text (supports scale and units) |
 | **GET** | `/butterfly/{code}` | Lookup butterfly parameters |
 
 ---
@@ -209,12 +247,8 @@ Interactive docs:
 ## **Request formats**
 
 ### `/match`
-Query parameters:
-
 ```
-width=3.1
-height=4.9
-table=config/patchSizesTop.txt
+POST /match?width=3.1&height=4.9&table=config/patchSizesTop.txt
 ```
 
 ### `/replace`
@@ -224,7 +258,11 @@ table=config/patchSizesTop.txt
   "height": 4.9,
   "cx": 10,
   "cy": 20,
-  "table_path": "config/patchSizesTop.txt"
+  "table_path": "config/patchSizesTop.txt",
+  "x_adjust": 0.0,
+  "y_adjust": 0.0,
+  "hole_radius": 0.05,
+  "diagnostics": false
 }
 ```
 
