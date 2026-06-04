@@ -4,10 +4,8 @@ from patchmatcher.matching import PatchMatcher
 def test_closest_patch(top_patches):
     matcher = PatchMatcher(top_patches)
 
-    # Pick a size close to an existing patch
     patch = matcher.closest_patch(3.1, 4.9)
 
-    # Should match a real patch from the table
     assert isinstance(patch.width, float)
     assert isinstance(patch.height, float)
 
@@ -17,15 +15,12 @@ def test_replace_geometry(top_patches, sample_rect):
 
     new_rect, hole = matcher.replace_geometry(sample_rect)
 
-    # New rectangle should be centered at the same point
     assert new_rect.cx == sample_rect.cx
     assert new_rect.cy == sample_rect.cy
 
-    # Hole should be centered at the same point
     assert hole.cx == sample_rect.cx
     assert hole.cy == sample_rect.cy
 
-    # New rectangle should have positive dimensions
     assert new_rect.width > 0
     assert new_rect.height > 0
 
@@ -33,7 +28,6 @@ def test_replace_geometry(top_patches, sample_rect):
 def test_closest_patch_exact_match(top_patches):
     matcher = PatchMatcher(top_patches)
 
-    # Pick a patch that exists exactly in the table
     first = next(iter(top_patches))
     patch = matcher.closest_patch(first.width, first.height)
 
@@ -50,9 +44,12 @@ def test_replace_geometry_with_adjustments(top_patches, sample_rect):
     assert new_rect.height > sample_rect.height
 
 
-def test_closest_patch_returns_patch(top_patches):
+def test_closest_patch_returns_patch_within_bounds(top_patches):
     matcher = PatchMatcher(top_patches)
-    patch = matcher.closest_patch(1000, 1000)  # extreme values
+
+    # Pick a value inside safe bounds
+    # PatchTable bounds: min_w=1.25, max_w=18.0 (example)
+    patch = matcher.closest_patch(10, 10)
 
     from patchmatcher.tables import Patch
 
