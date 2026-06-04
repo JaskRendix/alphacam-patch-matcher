@@ -3,6 +3,16 @@ from pathlib import Path
 
 from .geometry import Circle, Rectangle
 
+DXF_UNITS = {
+    "unitless": 0,
+    "in": 1,
+    "ft": 2,
+    "mi": 3,
+    "mm": 4,
+    "cm": 5,
+    "m": 6,
+}
+
 
 def load_json_input(path: Path) -> Rectangle:
     data = json.loads(path.read_text())
@@ -31,67 +41,41 @@ def write_json_output(path: Path, rect: Rectangle, hole: Circle) -> None:
     path.write_text(json.dumps(out, indent=2))
 
 
-def write_dxf(path: Path, rect: Rectangle, hole: Circle) -> None:
-    x1 = rect.cx - rect.width / 2
-    y1 = rect.cy - rect.height / 2
-    x2 = rect.cx + rect.width / 2
-    y2 = rect.cy + rect.height / 2
+def _dxf_string(
+    rect: Rectangle, hole: Circle, *, scale: float = 1.0, units: str = "in"
+) -> str:
+    """
+    Generate DXF content for a rectangle + center hole.
+    scale: multiply all coordinates by this factor
+    units: DXF $INSUNITS header (in, mm, cm, m, etc.)
+    """
 
-    dxf = f"""0
-SECTION
-2
-ENTITIES
-0
-LWPOLYLINE
-8
-0
-90
-4
-70
-1
-10
-{x1}
-20
-{y1}
-10
-{x2}
-20
-{y1}
-10
-{x2}
-20
-{y2}
-10
-{x1}
-20
-{y2}
-0
-CIRCLE
-8
-0
-10
-{hole.cx}
-20
-{hole.cy}
-40
-{hole.radius}
-0
-ENDSEC
-0
-EOF
-"""
-    path.write_text(dxf)
+    if units not in DXF_UNITS:
+        raise ValueError(f"Unsupported DXF unit: {units}")
 
+    # Apply scale
+    x1 = (rect.cx - rect.width / 2) * scale
+    y1 = (rect.cy - rect.height / 2) * scale
+    x2 = (rect.cx + rect.width / 2) * scale
+    y2 = (rect.cy + rect.height / 2) * scale
 
-def dxf_to_string(rect: Rectangle, hole: Circle) -> str:
-    x1 = rect.cx - rect.width / 2
-    y1 = rect.cy - rect.height / 2
-    x2 = rect.cx + rect.width / 2
-    y2 = rect.cy + rect.height / 2
+    cx = rect.cx * scale
+    cy = rect.cy * scale
+    r = hole.radius * scale
 
     return f"""0
 SECTION
 2
+HEADER
+9
+$INSUNITS
+70
+{DXF_UNITS[units]}
+0
+ENDSEC
+0
+SECTION
+2
 ENTITIES
 0
 LWPOLYLINE
@@ -122,13 +106,41 @@ CIRCLE
 8
 0
 10
-{hole.cx}
+{cx}
 20
-{hole.cy}
+{cy}
 40
-{hole.radius}
+{r}
 0
 ENDSEC
 0
 EOF
 """
+
+
+def write_dxf(
+    path: Path,
+    rect: Rectangle,
+    hole: Circle,
+    *,
+    scale: float = 1.0,
+    units: str = "in",
+) -> None:
+    """
+    Write DXF file with optional scaling and units.
+    """
+    dxf = _dxf_string(rect, hole, scale=scale, units=units)
+    path.write_text(dxf)
+
+
+def dxf_to_string(
+    rect: Rectangle,
+    hole: Circle,
+    *,
+    scale: float = 1.0,
+    units: str = "in",
+) -> str:
+    """
+    Return DXF as a string (used by API and tests).
+    """
+    return _dxf_string(rect, hole, scale=scale, units=units)
