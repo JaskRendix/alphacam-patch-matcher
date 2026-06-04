@@ -85,6 +85,22 @@ class PatchTable:
         """
         return self._min_w, self._min_h, self._max_w, self._max_h
 
+    @property
+    def min_width(self) -> float:
+        return self._min_w
+
+    @property
+    def max_width(self) -> float:
+        return self._max_w
+
+    @property
+    def min_height(self) -> float:
+        return self._min_h
+
+    @property
+    def max_height(self) -> float:
+        return self._max_h
+
     def validate_query(
         self, width: float, height: float, *, tolerance: float = 2.0
     ) -> None:

@@ -66,3 +66,77 @@ def test_patchtable_ignores_whitespace(tmp_path):
 
     assert p.width == 3.0
     assert p.height == 5.0
+
+
+def test_patchtable_bounds(tmp_path):
+    f = tmp_path / "bounds.txt"
+    f.write_text("3\n5\n10\n20\n")
+
+    table = PatchTable.from_file(f)
+
+    assert table.min_width == 3.0
+    assert table.max_width == 10.0
+    assert table.min_height == 5.0
+    assert table.max_height == 20.0
+
+
+def test_patchtable_validate_query_ok(tmp_path):
+    f = tmp_path / "ok.txt"
+    f.write_text("3\n5\n10\n20\n")
+
+    table = PatchTable.from_file(f)
+
+    # Should not raise
+    table.validate_query(5, 10)
+
+
+def test_patchtable_validate_query_outside(tmp_path):
+    f = tmp_path / "badq.txt"
+    f.write_text("3\n5\n10\n20\n")
+
+    table = PatchTable.from_file(f)
+
+    with pytest.raises(ValueError):
+        table.validate_query(999, 999)
+
+
+def test_patchtable_validate_query_with_tolerance(tmp_path):
+    f = tmp_path / "tol.txt"
+    f.write_text("10\n10\n")
+
+    table = PatchTable.from_file(f)
+
+    # tolerance = 2.0 → 12 is allowed
+    table.validate_query(12, 12)
+
+
+def test_patchtable_invalid_number(tmp_path):
+    f = tmp_path / "invalid.txt"
+    f.write_text("3.0\nnot_a_number\n")
+
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)
+
+
+def test_patchtable_invalid_float_values(tmp_path):
+    f = tmp_path / "naninf.txt"
+    f.write_text("nan\n5\n")
+
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)
+
+    f.write_text("inf\n5\n")
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)
+
+
+def test_patchtable_invalid_float_values(tmp_path):
+    f = tmp_path / "naninf.txt"
+    f.write_text("nan\n5\n")
+
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)
+
+    f.write_text("inf\n5\n")
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)

@@ -1,3 +1,5 @@
+import pytest
+
 from patchmatcher.matching import PatchMatcher
 
 
@@ -70,3 +72,70 @@ def test_replace_geometry_types(top_patches, sample_rect):
 def test_patchmatcher_holds_reference(top_patches):
     matcher = PatchMatcher(top_patches)
     assert matcher.patches is top_patches
+
+
+def test_closest_patch_with_metrics(top_patches):
+    matcher = PatchMatcher(top_patches)
+
+    result = matcher.closest_patch_with_metrics(3.1, 4.9)
+
+    assert result.patch.width > 0
+    assert result.patch.height > 0
+    assert result.distance >= 0
+    assert 0 <= result.percentile <= 1
+
+
+def test_replace_geometry_with_diagnostics(top_patches, sample_rect):
+    matcher = PatchMatcher(top_patches)
+
+    new_rect, hole, diag = matcher.replace_geometry(
+        sample_rect,
+        diagnostics=True,
+    )
+
+    assert new_rect.width > 0
+    assert new_rect.height > 0
+    assert diag.distance >= 0
+    assert 0 <= diag.percentile <= 1
+
+
+def test_replace_geometry_custom_hole_radius(top_patches, sample_rect):
+    matcher = PatchMatcher(top_patches)
+
+    new_rect, hole = matcher.replace_geometry(
+        sample_rect,
+        hole_radius=0.25,
+    )
+
+    assert hole.radius == 0.25
+
+
+def test_replace_geometry_invalid_hole_radius(top_patches, sample_rect):
+    matcher = PatchMatcher(top_patches)
+
+    with pytest.raises(ValueError):
+        matcher.replace_geometry(sample_rect, hole_radius=-1)
+
+
+def test_closest_patch_out_of_bounds(top_patches):
+    matcher = PatchMatcher(top_patches)
+
+    with pytest.raises(ValueError):
+        matcher.closest_patch(999, 999)
+
+
+def test_closest_patch_tie_breaking(top_patches):
+    matcher = PatchMatcher(top_patches)
+
+    # Pick a point exactly between two patches
+    # The matcher must return the first one in table order
+    p1 = next(iter(top_patches))
+    p2 = list(top_patches)[1]
+
+    mid_w = (p1.width + p2.width) / 2
+    mid_h = (p1.height + p2.height) / 2
+
+    patch = matcher.closest_patch(mid_w, mid_h)
+
+    assert patch.width == p1.width
+    assert patch.height == p1.height

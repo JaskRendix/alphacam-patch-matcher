@@ -124,3 +124,192 @@ def test_cli_butterfly_invalid_table(tmp_path):
 
     assert result.returncode == 0
     assert "Failed to load butterfly table" in result.stdout
+
+
+def test_cli_match_diagnostics(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "match",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--table",
+            str(table),
+            "--diagnostics",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Matched patch: 3.0 x 5.0" in result.stdout
+    assert "Distance:" in result.stdout
+    assert "Confidence:" in result.stdout
+
+
+def test_cli_replace_custom_hole_radius(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "replace",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--cx",
+            "10",
+            "--cy",
+            "20",
+            "--table",
+            str(table),
+            "--hole-radius",
+            "0.25",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Center hole: radius 0.25" in result.stdout
+
+
+def test_cli_replace_diagnostics(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "replace",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--cx",
+            "10",
+            "--cy",
+            "20",
+            "--table",
+            str(table),
+            "--diagnostics",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    assert "Match distance:" in result.stdout
+    assert "Confidence:" in result.stdout
+
+
+def test_cli_replace_dxf_scaled(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    out = tmp_path / "out.dxf"
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "replace",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--cx",
+            "10",
+            "--cy",
+            "20",
+            "--table",
+            str(table),
+            "--dxf-out",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    dxf = out.read_text()
+    assert "$INSUNITS" in dxf
+
+
+def test_cli_replace_svg_scaled(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    out = tmp_path / "out.svg"
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "replace",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--cx",
+            "10",
+            "--cy",
+            "20",
+            "--table",
+            str(table),
+            "--svg-out",
+            str(out),
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode == 0
+    svg = out.read_text()
+    assert "<svg" in svg
+    assert "</svg>" in svg
+
+
+def test_cli_replace_invalid_hole_radius(tmp_path):
+    table = tmp_path / "table.txt"
+    table.write_text("3.0\n5.0\n")
+
+    result = subprocess.run(
+        [
+            "python",
+            "-m",
+            "patchmatcher",
+            "replace",
+            "--width",
+            "3.1",
+            "--height",
+            "4.9",
+            "--cx",
+            "10",
+            "--cy",
+            "20",
+            "--table",
+            str(table),
+            "--hole-radius",
+            "-1",
+        ],
+        capture_output=True,
+        text=True,
+    )
+
+    assert result.returncode != 0

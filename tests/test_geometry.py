@@ -104,3 +104,41 @@ def test_circle_translate(circle, dx, dy, expected):
     moved = circle.translate(dx, dy)
     assert (moved.cx, moved.cy) == expected
     assert moved.radius == circle.radius
+
+
+def test_rectangle_invalid_dimensions():
+    with pytest.raises(ValueError):
+        Rectangle(width=0, height=5, cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Rectangle(width=5, height=0, cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Rectangle(width=-1, height=5, cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Rectangle(width=5, height=-1, cx=0, cy=0)
+
+
+def test_circle_invalid_radius():
+    with pytest.raises(ValueError):
+        Circle(radius=0, cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Circle(radius=-1, cx=0, cy=0)
+
+
+def test_rectangle_invalid_numeric_values():
+    with pytest.raises(ValueError):
+        Rectangle(width=float("nan"), height=5, cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Rectangle(width=5, height=float("inf"), cx=0, cy=0)
+
+
+def test_circle_invalid_numeric_values():
+    with pytest.raises(ValueError):
+        Circle(radius=float("nan"), cx=0, cy=0)
+
+    with pytest.raises(ValueError):
+        Circle(radius=float("inf"), cx=0, cy=0)

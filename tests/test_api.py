@@ -159,3 +159,145 @@ def test_butterfly_custom_missing_code(tmp_path):
     response = client.get("/butterfly/W123", params={"table": str(table)})
 
     assert response.status_code == 404
+
+
+def test_match_with_diagnostics(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    response = client.post(
+        "/match",
+        params={
+            "width": 3.1,
+            "height": 4.9,
+            "table": str(table),
+            "diagnostics": True,
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+
+    assert "distance" in data
+    assert "percentile" in data
+    assert "confidence" in data
+
+
+def test_replace_with_diagnostics(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    payload = {
+        "width": 3.1,
+        "height": 4.9,
+        "cx": 10,
+        "cy": 20,
+        "table_path": str(table),
+        "diagnostics": True,
+    }
+
+    response = client.post("/replace", json=payload)
+    assert response.status_code == 200
+
+    data = response.json()
+    assert data["diagnostics"] is not None
+    assert "distance" in data["diagnostics"]
+    assert "confidence" in data["diagnostics"]
+
+
+def test_replace_custom_hole_radius(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    payload = {
+        "width": 3.1,
+        "height": 4.9,
+        "cx": 10,
+        "cy": 20,
+        "table_path": str(table),
+        "hole_radius": 0.25,
+    }
+
+    response = client.post("/replace", json=payload)
+    assert response.status_code == 200
+
+    hole = response.json()["center_hole"]
+    assert hole["radius"] == 0.25
+
+
+def test_replace_dxf_scaled_units(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    response = client.get(
+        "/replace/dxf",
+        params={
+            "width": 3.1,
+            "height": 4.9,
+            "cx": 10,
+            "cy": 20,
+            "table": str(table),
+            "scale": 25.4,
+            "units": "mm",
+        },
+    )
+
+    assert response.status_code == 200
+    dxf = response.text
+
+    assert "$INSUNITS" in dxf
+    assert "70\n4" in dxf  # 4 = mm
+
+
+def test_replace_svg_scaled_units(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    response = client.get(
+        "/replace/svg",
+        params={
+            "width": 3.1,
+            "height": 4.9,
+            "cx": 10,
+            "cy": 20,
+            "table": str(table),
+            "scale": 10,
+            "units": "mm",
+        },
+    )
+
+    assert response.status_code == 200
+    svg = response.text
+
+    assert 'width="' in svg
+    assert 'mm"' in svg
+    assert "<svg" in svg
+
+
+def test_replace_invalid_hole_radius(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    payload = {
+        "width": 3.1,
+        "height": 4.9,
+        "cx": 10,
+        "cy": 20,
+        "table_path": str(table),
+        "hole_radius": -1,
+    }
+
+    response = client.post("/replace", json=payload)
+    assert response.status_code == 400
+
+
+def test_replace_svg_invalid_scale(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    response = client.get(
+        "/replace/svg",
+        params={
+            "width": 3.1,
+            "height": 4.9,
+            "cx": 10,
+            "cy": 20,
+            "table": str(table),
+            "scale": -5,
+        },
+    )
+
+    assert response.status_code == 400
