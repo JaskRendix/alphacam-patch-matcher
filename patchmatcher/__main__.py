@@ -32,8 +32,15 @@ def cmd_serve(args):
 def cmd_match(args) -> None:
     patches = PatchTable.from_file(args.table)
     matcher = PatchMatcher(patches)
-    patch = matcher.closest_patch(args.width, args.height)
-    print(f"Matched patch: {patch.width} x {patch.height}")
+
+    if args.diagnostics:
+        result = matcher.closest_patch_with_metrics(args.width, args.height)
+        print(f"Matched patch: {result.patch.width} x {result.patch.height}")
+        print(f"Distance: {result.distance:.4f}")
+        print(f"Confidence: {1 - result.percentile:.4f}")
+    else:
+        patch = matcher.closest_patch(args.width, args.height)
+        print(f"Matched patch: {patch.width} x {patch.height}")
 
 
 def cmd_replace(args) -> None:
@@ -51,22 +58,40 @@ def cmd_replace(args) -> None:
             cy=args.cy,
         )
 
-    new_rect, hole = matcher.replace_geometry(
-        rect,
-        x_adjust=args.x_adjust,
-        y_adjust=args.y_adjust,
-    )
+    # Perform replacement
+    if args.diagnostics:
+        new_rect, hole, diag = matcher.replace_geometry(
+            rect,
+            x_adjust=args.x_adjust,
+            y_adjust=args.y_adjust,
+            hole_radius=args.hole_radius,
+            diagnostics=True,
+        )
+    else:
+        new_rect, hole = matcher.replace_geometry(
+            rect,
+            x_adjust=args.x_adjust,
+            y_adjust=args.y_adjust,
+            hole_radius=args.hole_radius,
+        )
+        diag = None
 
     # JSON output
     if args.json_out:
         write_json_output(args.json_out, new_rect, hole)
         print(f"Wrote JSON output to {args.json_out}")
+        if diag:
+            print(f"Match distance: {diag.distance:.4f}")
+            print(f"Confidence: {1 - diag.percentile:.4f}")
         return
 
     # DXF output
     if args.dxf_out:
         write_dxf(args.dxf_out, new_rect, hole)
         print(f"Wrote DXF to {args.dxf_out}")
+        if diag:
+            print(f"Match distance: {diag.distance:.4f}")
+            print(f"Confidence: {1 - diag.percentile:.4f}")
         return
 
     # SVG output
@@ -74,6 +99,9 @@ def cmd_replace(args) -> None:
         svg = scene_to_svg(new_rect, hole)
         args.svg_out.write_text(svg)
         print(f"Wrote SVG to {args.svg_out}")
+        if diag:
+            print(f"Match distance: {diag.distance:.4f}")
+            print(f"Confidence: {1 - diag.percentile:.4f}")
         return
 
     # Default text output
@@ -81,6 +109,10 @@ def cmd_replace(args) -> None:
         f"New rectangle: {new_rect.width} x {new_rect.height} at ({new_rect.cx}, {new_rect.cy})"
     )
     print(f"Center hole: radius {hole.radius} at ({hole.cx}, {hole.cy})")
+
+    if diag:
+        print(f"Match distance: {diag.distance:.4f}")
+        print(f"Confidence: {1 - diag.percentile:.4f}")
 
 
 def cmd_butterfly(args) -> None:
@@ -124,6 +156,9 @@ def build_parser() -> argparse.ArgumentParser:
     p_match.add_argument("--width", type=float, required=True)
     p_match.add_argument("--height", type=float, required=True)
     p_match.add_argument("--table", type=Path, required=True)
+    p_match.add_argument(
+        "--diagnostics", action="store_true", help="Show match metrics"
+    )
     p_match.set_defaults(func=cmd_match)
 
     # replace
@@ -135,6 +170,10 @@ def build_parser() -> argparse.ArgumentParser:
     p_replace.add_argument("--table", type=Path, required=True)
     p_replace.add_argument("--x-adjust", type=float, default=0.0)
     p_replace.add_argument("--y-adjust", type=float, default=0.0)
+    p_replace.add_argument("--hole-radius", type=float, default=0.05)
+    p_replace.add_argument(
+        "--diagnostics", action="store_true", help="Show match metrics"
+    )
 
     # JSON I/O
     p_replace.add_argument("--json-in", type=Path)
