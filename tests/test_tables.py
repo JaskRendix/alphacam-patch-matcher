@@ -53,8 +53,8 @@ def test_patchtable_empty_file(tmp_path):
     f = tmp_path / "empty.txt"
     f.write_text("")
 
-    table = PatchTable.from_file(f)
-    assert len(table) == 0
+    with pytest.raises(ValueError):
+        PatchTable.from_file(f)
 
 
 def test_patchtable_ignores_whitespace(tmp_path):
