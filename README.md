@@ -121,16 +121,6 @@ The goal is a portable logic layer, not a CAM system.
 
 ## **Installation**
 
-### CLI only
-```
-pip install patchmatcher
-```
-
-### CLI + API
-```
-pip install "patchmatcher[api]"
-```
-
 ### Development install
 ```
 pip install -e .[api]
