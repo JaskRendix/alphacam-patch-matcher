@@ -177,9 +177,12 @@ def test_match_with_diagnostics(tmp_path):
     assert response.status_code == 200
     data = response.json()
 
-    assert "distance" in data
-    assert "percentile" in data
-    assert "confidence" in data
+    assert "diagnostics" in data
+    diag = data["diagnostics"]
+
+    assert "distance" in diag
+    assert "percentile" in diag
+    assert "confidence" in diag
 
 
 def test_replace_with_diagnostics(tmp_path):

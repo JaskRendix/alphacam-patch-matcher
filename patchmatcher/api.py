@@ -1,5 +1,4 @@
 from pathlib import Path
-from typing import Optional
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import PlainTextResponse
@@ -53,46 +52,62 @@ class MatchDiagnostics(BaseModel):
     confidence: float
 
 
+class MatchResponse(BaseModel):
+    matched_width: float
+    matched_height: float
+    diagnostics: MatchDiagnostics | None = None
+
+
 class ReplaceResponse(BaseModel):
     rectangle: RectangleOut
     center_hole: CircleOut
-    diagnostics: Optional[MatchDiagnostics] = None
+    diagnostics: MatchDiagnostics | None = None
 
 
-@app.post("/match", tags=["Matching"])
+@app.post("/match", response_model=MatchResponse, tags=["Matching"])
 async def match_patch(
     width: float,
     height: float,
     table: str = "config/patchSizesTop.txt",
     diagnostics: bool = False,
-):
-    """Equivalent to: patchmatcher match --width X --height Y --table FILE"""
+) -> MatchResponse:
+    """Return the closest patch match with optional diagnostics."""
     try:
         patches = PatchTable.from_file(Path(table))
+        patches.validate_query(width, height)
+
         matcher = PatchMatcher(patches)
 
         if diagnostics:
             result: MatchResult = matcher.closest_patch_with_metrics(width, height)
-            return {
-                "matched_width": result.patch.width,
-                "matched_height": result.patch.height,
-                "distance": result.distance,
-                "percentile": result.percentile,
-                "confidence": 1 - result.percentile,
-            }
+            diag = MatchDiagnostics(
+                distance=result.distance,
+                percentile=result.percentile,
+                confidence=1 - result.percentile,
+            )
+            return MatchResponse(
+                matched_width=result.patch.width,
+                matched_height=result.patch.height,
+                diagnostics=diag,
+            )
 
         patch = matcher.closest_patch(width, height)
-        return {"matched_width": patch.width, "matched_height": patch.height}
+        return MatchResponse(
+            matched_width=patch.width,
+            matched_height=patch.height,
+        )
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
 
 @app.post("/replace", response_model=ReplaceResponse, tags=["Matching"])
-async def replace_geometry(req: ReplaceRequest):
-    """Equivalent to: patchmatcher replace ..."""
+async def replace_geometry(req: ReplaceRequest) -> ReplaceResponse:
+    """Replace geometry using the closest patch and return rectangle, hole, and diagnostics."""
     try:
         patches = PatchTable.from_file(Path(req.table_path))
+        patches.validate_query(req.width, req.height)
+
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(
@@ -155,10 +170,17 @@ async def replace_dxf(
     hole_radius: float = 0.05,
     scale: float = 1.0,
     units: str = "in",
-):
-    """Return DXF text directly."""
+) -> str:
+    """Return a DXF string for the replaced geometry."""
     try:
+        if scale <= 0:
+            raise ValueError("scale must be > 0")
+        if units not in {"in", "mm"}:
+            raise ValueError("units must be 'in' or 'mm'")
+
         patches = PatchTable.from_file(Path(table))
+        patches.validate_query(width, height)
+
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
@@ -187,10 +209,17 @@ async def replace_svg(
     hole_radius: float = 0.05,
     scale: float = 1.0,
     units: str = "px",
-):
-    """Return SVG text directly."""
+) -> str:
+    """Return an SVG string for the replaced geometry."""
     try:
+        if scale <= 0:
+            raise ValueError("scale must be > 0")
+        if units not in {"px", "mm", "in"}:
+            raise ValueError("units must be 'px', 'mm', or 'in'")
+
         patches = PatchTable.from_file(Path(table))
+        patches.validate_query(width, height)
+
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
@@ -208,8 +237,8 @@ async def replace_svg(
 
 
 @app.get("/butterfly/{code}", tags=["Butterflies"])
-async def butterfly_lookup(code: str, table: Optional[str] = None):
-    """Equivalent to: patchmatcher butterfly CODE"""
+async def butterfly_lookup(code: str, table: str | None = None) -> dict:
+    """Return butterfly parameters for the given code."""
     try:
         if table:
             tbl = load_butterfly_table(Path(table))
