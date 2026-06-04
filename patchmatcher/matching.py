@@ -13,25 +13,17 @@ class PatchMatcher:
 
     def closest_patch(self, width: float, height: float) -> Patch:
         """
-        Modern Python version of the VB6 search logic:
-          1. Find closest width
-          2. From that index onward, find closest height
+        Modern, correct patch selection:
+        - Search all patches
+        - Use Euclidean distance in (width, height) space
+        - Deterministic tie-breaking via table order
         """
         patches_list = self.patches.patches
 
-        # Step 1: closest width
-        best_w_idx = min(
-            range(len(patches_list)),
-            key=lambda i: abs(patches_list[i].width - width),
-        )
+        def dist(p: Patch) -> float:
+            return ((p.width - width) ** 2 + (p.height - height) ** 2) ** 0.5
 
-        # Step 2: closest height starting from best_w_idx
-        best_idx = min(
-            range(best_w_idx, len(patches_list)),
-            key=lambda i: abs(patches_list[i].height - height),
-        )
-
-        return patches_list[best_idx]
+        return min(patches_list, key=dist)
 
     def replace_geometry(
         self,
