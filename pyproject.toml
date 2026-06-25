@@ -18,7 +18,8 @@ api = [
 
 test = [
     "httpx",
-    "pytest"
+    "pytest",
+    "pytest-cov",
 ]
 
 [project.urls]
@@ -42,4 +43,4 @@ include-package-data = true
 [tool.pytest.ini_options]
 pythonpath = "."
 testpaths = ["tests"]
-addopts = "-ra"
+addopts = "--cov=patchmatcher --cov-report=term-missing"
