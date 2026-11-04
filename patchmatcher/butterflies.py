@@ -2,6 +2,7 @@ import math
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
+
 import tomllib
 
 REQUIRED_FIELDS = {

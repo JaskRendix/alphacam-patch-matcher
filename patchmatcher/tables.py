@@ -67,14 +67,19 @@ class PatchTable:
         The file must contain an even number of non-empty lines.
         """
         path = Path(path)
-        lines = [l.strip() for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
+        lines = [
+            l.strip()
+            for l in path.read_text(encoding="utf-8").splitlines()
+            if l.strip()
+        ]
 
         if len(lines) % 2 != 0:
             raise ValueError(f"Expected an even number of lines in {path}")
 
         try:
             patches = [
-                Patch(float(lines[i]), float(lines[i + 1])) for i in range(0, len(lines), 2)
+                Patch(float(lines[i]), float(lines[i + 1]))
+                for i in range(0, len(lines), 2)
             ]
         except ValueError as e:
             raise ValueError(f"Invalid numeric value in patch table '{path}'") from e

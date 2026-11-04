@@ -10,10 +10,11 @@ class MatchResult:
     """
     Rich diagnostic information about a patch match.
     """
+
     patch: Patch
-    distance: float         # Euclidean distance to query
-    distance_ratio: float   # Normalized distance metric where: 0.0 = exact match / 1.0 = as far away as the most distant candidate
-    candidate_count: int    # Total candidates evaluated
+    distance: float  # Euclidean distance to query
+    distance_ratio: float  # Normalized distance metric where: 0.0 = exact match / 1.0 = as far away as the most distant candidate
+    candidate_count: int  # Total candidates evaluated
 
 
 @dataclass(frozen=True)
@@ -22,6 +23,7 @@ class ReplacementResult:
     Result of geometry replacement containing the new rectangle, center hole,
     and optional match diagnostics.
     """
+
     rectangle: Rectangle
     hole: Circle
     diagnostics: MatchResult | None = None
@@ -55,11 +57,10 @@ class PatchMatcher:
             raise ValueError("Patch table is empty.")
 
         distances = [self._distance(p, width, height) for p in patches_list]
-        
+
         # Pythonic idiom: find min using zip
         best_patch, best_distance = min(
-            zip(patches_list, distances),
-            key=lambda item: item[1]
+            zip(patches_list, distances), key=lambda item: item[1]
         )
 
         max_distance = max(distances)
