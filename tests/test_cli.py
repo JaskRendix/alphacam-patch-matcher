@@ -150,8 +150,9 @@ def test_cli_match_diagnostics(tmp_path):
 
     assert result.returncode == 0
     assert "Matched patch: 3.0 x 5.0" in result.stdout
-    assert "Distance:" in result.stdout
-    assert "Confidence:" in result.stdout
+    assert "Match distance:" in result.stdout
+    assert "Distance ratio:" in result.stdout
+    assert "Candidates:" in result.stdout
 
 
 def test_cli_replace_custom_hole_radius(tmp_path):
@@ -213,7 +214,8 @@ def test_cli_replace_diagnostics(tmp_path):
 
     assert result.returncode == 0
     assert "Match distance:" in result.stdout
-    assert "Confidence:" in result.stdout
+    assert "Distance ratio:" in result.stdout
+    assert "Candidates:" in result.stdout
 
 
 def test_cli_replace_dxf_scaled(tmp_path):
