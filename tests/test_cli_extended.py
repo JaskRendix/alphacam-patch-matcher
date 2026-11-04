@@ -13,10 +13,17 @@ class FakePatch:
 
 
 class FakeMatchResult:
-    def __init__(self, patch, distance=0.5, percentile=0.2):
+    def __init__(
+        self,
+        patch,
+        distance=0.5,
+        distance_ratio=0.2,
+        candidate_count=1,
+    ):
         self.patch = patch
         self.distance = distance
-        self.percentile = percentile
+        self.distance_ratio = distance_ratio
+        self.candidate_count = candidate_count
 
 
 class FakeRect:
@@ -32,6 +39,18 @@ class FakeHole:
         self.cx = cx
         self.cy = cy
         self.radius = radius
+
+
+class FakeReplacementResult:
+    def __init__(
+        self,
+        rectangle,
+        hole,
+        diagnostics=None,
+    ):
+        self.rectangle = rectangle
+        self.hole = hole
+        self.diagnostics = diagnostics
 
 
 def test_cmd_match_basic(monkeypatch, capsys, tmp_path):
@@ -80,7 +99,12 @@ def test_cmd_match_diagnostics(monkeypatch, capsys, tmp_path):
             pass
 
         def closest_patch_with_metrics(self, w, h):
-            return FakeMatchResult(FakePatch(w, h), distance=0.33, percentile=0.1)
+            return FakeMatchResult(
+                FakePatch(w, h),
+                distance=0.33,
+                distance_ratio=0.1,
+                candidate_count=5,
+            )
 
     monkeypatch.setattr(cli, "PatchTable", FakePatchTable)
     monkeypatch.setattr(cli, "PatchMatcher", FakeMatcher)
@@ -96,8 +120,9 @@ def test_cmd_match_diagnostics(monkeypatch, capsys, tmp_path):
     cli.cmd_match(args)
     out = capsys.readouterr().out
     assert "Matched patch: 5 x 7" in out
-    assert "Distance: 0.3300" in out
-    assert "Confidence: 0.9000" in out
+    assert "Match distance: 0.3300" in out
+    assert "Distance ratio: 0.1000" in out
+    assert "Candidates: 5" in out
 
 
 def test_cmd_replace_default_text(monkeypatch, capsys, tmp_path):
@@ -119,8 +144,16 @@ def test_cmd_replace_default_text(monkeypatch, capsys, tmp_path):
             new_rect = FakeRect(rect.width + 1, rect.height + 2, rect.cx, rect.cy)
             hole = FakeHole(rect.cx, rect.cy, hole_radius)
             if diagnostics:
-                return new_rect, hole, FakeMatchResult(FakePatch(1, 2))
-            return new_rect, hole
+                return FakeReplacementResult(
+                    new_rect,
+                    hole,
+                    FakeMatchResult(FakePatch(1, 2)),
+                )
+
+            return FakeReplacementResult(
+                new_rect,
+                hole,
+            )
 
     monkeypatch.setattr(cli, "PatchTable", FakePatchTable)
     monkeypatch.setattr(cli, "PatchMatcher", FakeMatcher)
@@ -169,7 +202,10 @@ def test_cmd_replace_json_in(monkeypatch, capsys, tmp_path):
         def replace_geometry(
             self, rect, x_adjust, y_adjust, hole_radius, diagnostics=False
         ):
-            return FakeRect(9, 9, 0, 0), FakeHole(0, 0, 1.0)
+            return FakeReplacementResult(
+                FakeRect(9, 9, 0, 0),
+                FakeHole(0, 0, 1.0),
+            )
 
     monkeypatch.setattr(cli, "PatchTable", FakePatchTable)
     monkeypatch.setattr(cli, "PatchMatcher", FakeMatcher)
@@ -217,7 +253,10 @@ def test_cmd_replace_dxf(monkeypatch, capsys, tmp_path):
         def replace_geometry(
             self, rect, x_adjust, y_adjust, hole_radius, diagnostics=False
         ):
-            return FakeRect(1, 2), FakeHole(0, 0)
+            return FakeReplacementResult(
+                FakeRect(1, 2),
+                FakeHole(0, 0),
+            )
 
     monkeypatch.setattr(cli, "PatchTable", FakePatchTable)
     monkeypatch.setattr(cli, "PatchMatcher", FakeMatcher)
@@ -262,7 +301,10 @@ def test_cmd_replace_svg(monkeypatch, capsys, tmp_path):
         def replace_geometry(
             self, rect, x_adjust, y_adjust, hole_radius, diagnostics=False
         ):
-            return FakeRect(1, 2), FakeHole(0, 0)
+            return FakeReplacementResult(
+                FakeRect(1, 2),
+                FakeHole(0, 0),
+            )
 
     monkeypatch.setattr(cli, "PatchTable", FakePatchTable)
     monkeypatch.setattr(cli, "PatchMatcher", FakeMatcher)
