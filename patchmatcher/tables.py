@@ -8,7 +8,7 @@ from typing import Self
 def _validate_number(name: str, value: float) -> None:
     if not isinstance(value, (int, float)):
         raise TypeError(f"{name} must be a number, got {type(value).__name__}")
-    if math.isnan(value) or math.isinf(value):
+    if not math.isfinite(value):
         raise ValueError(f"{name} must be a finite number, got {value}")
 
 
@@ -35,22 +35,27 @@ class PatchTable:
     """
 
     def __init__(self, patches: Iterable[Patch]):
-        patches = list(patches)
-        if not patches:
+        patches_tuple = tuple(patches)
+        if not patches_tuple:
             raise ValueError("PatchTable cannot be empty")
 
         # Validate all patches
-        for p in patches:
+        for p in patches_tuple:
             if not isinstance(p, Patch):
                 raise TypeError(f"Expected Patch, got {type(p).__name__}")
 
-        self.patches = patches
+        self._patches = patches_tuple
 
-        # Precompute bounds
-        self._min_w = min(p.width for p in patches)
-        self._max_w = max(p.width for p in patches)
-        self._min_h = min(p.height for p in patches)
-        self._max_h = max(p.height for p in patches)
+        # Precompute bounds safely
+        self._min_w = min(p.width for p in self._patches)
+        self._max_w = max(p.width for p in self._patches)
+        self._min_h = min(p.height for p in self._patches)
+        self._max_h = max(p.height for p in self._patches)
+
+    @property
+    def patches(self) -> tuple[Patch, ...]:
+        """Return an immutable tuple of patches to protect precomputed bounds."""
+        return self._patches
 
     @classmethod
     def from_file(cls, path: str | Path) -> Self:
@@ -62,21 +67,25 @@ class PatchTable:
         The file must contain an even number of non-empty lines.
         """
         path = Path(path)
-        lines = [l.strip() for l in path.read_text().splitlines() if l.strip()]
+        lines = [l.strip() for l in path.read_text(encoding="utf-8").splitlines() if l.strip()]
 
         if len(lines) % 2 != 0:
             raise ValueError(f"Expected an even number of lines in {path}")
 
-        patches = [
-            Patch(float(lines[i]), float(lines[i + 1])) for i in range(0, len(lines), 2)
-        ]
+        try:
+            patches = [
+                Patch(float(lines[i]), float(lines[i + 1])) for i in range(0, len(lines), 2)
+            ]
+        except ValueError as e:
+            raise ValueError(f"Invalid numeric value in patch table '{path}'") from e
+
         return cls(patches)
 
     def __len__(self) -> int:
-        return len(self.patches)
+        return len(self._patches)
 
     def __iter__(self) -> Iterator[Patch]:
-        return iter(self.patches)
+        return iter(self._patches)
 
     @property
     def bounds(self) -> tuple[float, float, float, float]:
@@ -105,11 +114,15 @@ class PatchTable:
         self, width: float, height: float, *, tolerance: float = 2.0
     ) -> None:
         """
-        Validate that the requested width/height are within a reasonable range
-        of the patch table.
+        Validate query dimensions against the patch table.
+        Queries are allowed to extend beyond the stored patch bounds
+        by a configurable multiplier.
 
-        tolerance = multiplier for allowed deviation.
-        Example: tolerance=2.0 allows queries up to 2× outside the table range.
+        Example:
+            table width range = 10..100
+            tolerance = 2.0
+        Allowed width range becomes:
+            5..200
         """
         _validate_positive("query width", width)
         _validate_positive("query height", height)
