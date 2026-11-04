@@ -3,23 +3,21 @@ from dataclasses import dataclass
 from typing import Self
 
 
-def _validate_positive(name: str, value: float) -> None:
+def _validate_number(name: str, value: float) -> None:
     if not isinstance(value, (int, float)):
         raise TypeError(f"{name} must be a number, got {type(value).__name__}")
-
-    if math.isnan(value) or math.isinf(value):
+    if not math.isfinite(value):
         raise ValueError(f"{name} must be a finite number, got {value}")
 
+
+def _validate_positive(name: str, value: float) -> None:
+    _validate_number(name, value)
     if value <= 0:
         raise ValueError(f"{name} must be > 0, got {value}")
 
 
 def _validate_coordinate(name: str, value: float) -> None:
-    if not isinstance(value, (int, float)):
-        raise TypeError(f"{name} must be a number, got {type(value).__name__}")
-
-    if math.isnan(value) or math.isinf(value):
-        raise ValueError(f"{name} must be a finite number, got {value}")
+    _validate_number(name, value)
 
 
 @dataclass(frozen=True)
