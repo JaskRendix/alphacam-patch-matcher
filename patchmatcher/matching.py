@@ -10,10 +10,26 @@ class MatchResult:
     """
     Rich diagnostic information about a patch match.
     """
-
     patch: Patch
-    distance: float  # Euclidean distance to query
-    percentile: float  # 0 = best match, 1 = worst match
+    distance: float         # Euclidean distance to query
+    distance_ratio: float   # Normalized distance metric where: 0.0 = exact match / 1.0 = as far away as the most distant candidate
+    candidate_count: int    # Total candidates evaluated
+
+
+@dataclass(frozen=True)
+class ReplacementResult:
+    """
+    Result of geometry replacement containing the new rectangle, center hole,
+    and optional match diagnostics.
+    """
+    rectangle: Rectangle
+    hole: Circle
+    diagnostics: MatchResult | None = None
+
+
+def _validate_finite(value: float, name: str) -> None:
+    if not math.isfinite(value):
+        raise ValueError(f"{name} must be finite, got {value}")
 
 
 class PatchMatcher:
@@ -28,38 +44,45 @@ class PatchMatcher:
     def _distance(self, p: Patch, width: float, height: float) -> float:
         return math.hypot(p.width - width, p.height - height)
 
-    def closest_patch(self, width: float, height: float) -> Patch:
+    def _match(self, width: float, height: float) -> MatchResult:
         """
-        Return only the patch (legacy behavior).
-        """
-        # Safety: ensure query is within reasonable bounds
-        self.patches.validate_query(width, height)
-
-        patches_list = self.patches.patches
-        return min(patches_list, key=lambda p: self._distance(p, width, height))
-
-    def closest_patch_with_metrics(self, width: float, height: float) -> MatchResult:
-        """
-        Return patch + distance + percentile.
+        Internal unified matching method to evaluate candidates and compute metrics.
         """
         self.patches.validate_query(width, height)
-
         patches_list = self.patches.patches
+
+        if not patches_list:
+            raise ValueError("Patch table is empty.")
+
         distances = [self._distance(p, width, height) for p in patches_list]
+        
+        # Pythonic idiom: find min using zip
+        best_patch, best_distance = min(
+            zip(patches_list, distances),
+            key=lambda item: item[1]
+        )
 
-        best_idx = min(range(len(patches_list)), key=lambda i: distances[i])
-        best_patch = patches_list[best_idx]
-        best_distance = distances[best_idx]
-
-        # Percentile: where the best match sits relative to all distances
         max_distance = max(distances)
-        percentile = 0.0 if max_distance == 0 else best_distance / max_distance
+        distance_ratio = 0.0 if max_distance == 0 else best_distance / max_distance
 
         return MatchResult(
             patch=best_patch,
             distance=best_distance,
-            percentile=percentile,
+            distance_ratio=distance_ratio,
+            candidate_count=len(patches_list),
         )
+
+    def closest_patch(self, width: float, height: float) -> Patch:
+        """
+        Return only the best matching patch.
+        """
+        return self._match(width, height).patch
+
+    def closest_patch_with_metrics(self, width: float, height: float) -> MatchResult:
+        """
+        Return rich MatchResult containing the patch, distance, and metrics.
+        """
+        return self._match(width, height)
 
     def replace_geometry(
         self,
@@ -69,42 +92,45 @@ class PatchMatcher:
         hole_radius: float = 0.05,
         *,
         diagnostics: bool = False,
-    ):
+    ) -> ReplacementResult:
         """
         Replace a geometry with the closest patch rectangle.
 
         Returns:
-            - new Rectangle
-            - center Circle
-            - (optional) MatchResult if diagnostics=True
+            ReplacementResult containing the new Rectangle, center Circle,
+            and optional MatchResult diagnostics.
         """
-        # Validate adjustments
-        if math.isnan(x_adjust) or math.isinf(x_adjust):
-            raise ValueError(f"x_adjust must be finite, got {x_adjust}")
-        if math.isnan(y_adjust) or math.isinf(y_adjust):
-            raise ValueError(f"y_adjust must be finite, got {y_adjust}")
-        if hole_radius <= 0 or math.isnan(hole_radius) or math.isinf(hole_radius):
-            raise ValueError(f"hole_radius must be > 0 and finite, got {hole_radius}")
+        _validate_finite(x_adjust, "x_adjust")
+        _validate_finite(y_adjust, "y_adjust")
+        _validate_finite(hole_radius, "hole_radius")
+        if hole_radius <= 0:
+            raise ValueError(f"hole_radius must be > 0, got {hole_radius}")
 
-        # Perform match
-        if diagnostics:
-            result = self.closest_patch_with_metrics(geo.width, geo.height)
-            patch = result.patch
-        else:
-            patch = self.closest_patch(geo.width, geo.height)
-            result = None
+        # Perform match using the unified internal matcher
+        match_result = self._match(geo.width, geo.height)
 
-        # Construct new rectangle
+        # Compute and guard final dimensions against negative/zero results
+        new_width = match_result.patch.width + x_adjust
+        new_height = match_result.patch.height + y_adjust
+
+        if new_width <= 0 or new_height <= 0:
+            raise ValueError(
+                f"Resulting patch dimensions must be positive, got width={new_width}, height={new_height}"
+            )
+
+        # Construct new rectangle with offsets
         new_rect = Rectangle(
-            width=patch.width + x_adjust,
-            height=patch.height + y_adjust,
+            width=new_width,
+            height=new_height,
             cx=geo.cx,
             cy=geo.cy,
         )
 
-        # Center hole
+        # Center hole definition
         center_hole = Circle(radius=hole_radius, cx=geo.cx, cy=geo.cy)
 
-        if diagnostics:
-            return new_rect, center_hole, result
-        return new_rect, center_hole
+        return ReplacementResult(
+            rectangle=new_rect,
+            hole=center_hole,
+            diagnostics=match_result if diagnostics else None,
+        )
