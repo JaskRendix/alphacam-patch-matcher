@@ -181,8 +181,10 @@ def test_match_with_diagnostics(tmp_path):
     diag = data["diagnostics"]
 
     assert "distance" in diag
-    assert "percentile" in diag
-    assert "confidence" in diag
+    assert "distance_ratio" in diag
+    assert "candidate_count" in diag
+    assert 0 <= diag["distance_ratio"] <= 1
+    assert diag["candidate_count"] > 0
 
 
 def test_replace_with_diagnostics(tmp_path):
@@ -202,8 +204,15 @@ def test_replace_with_diagnostics(tmp_path):
 
     data = response.json()
     assert data["diagnostics"] is not None
-    assert "distance" in data["diagnostics"]
-    assert "confidence" in data["diagnostics"]
+
+    diag = data["diagnostics"]
+
+    assert "distance" in diag
+    assert "distance_ratio" in diag
+    assert "candidate_count" in diag
+
+    assert 0 <= diag["distance_ratio"] <= 1
+    assert diag["candidate_count"] > 0
 
 
 def test_replace_custom_hole_radius(tmp_path):
@@ -304,3 +313,21 @@ def test_replace_svg_invalid_scale(tmp_path):
     )
 
     assert response.status_code == 400
+
+
+def test_match_diagnostics_candidate_count(tmp_path):
+    table = make_patch_table(tmp_path)
+
+    response = client.post(
+        "/match",
+        params={
+            "width": 3.1,
+            "height": 4.9,
+            "table": str(table),
+            "diagnostics": True,
+        },
+    )
+
+    diag = response.json()["diagnostics"]
+
+    assert diag["candidate_count"] == 2
