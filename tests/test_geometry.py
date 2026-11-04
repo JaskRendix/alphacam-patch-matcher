@@ -22,7 +22,6 @@ def test_rectangle_bounds(width, height, cx, cy, expected):
     "width,height,area",
     [
         (4, 2, 8),
-        (4, 2, 8),
         (10, 10, 100),
         (1, 1, 1),
     ],
@@ -142,3 +141,49 @@ def test_circle_invalid_numeric_values():
 
     with pytest.raises(ValueError):
         Circle(radius=float("inf"), cx=0, cy=0)
+
+
+def test_rectangle_invalid_coordinates():
+    with pytest.raises(ValueError):
+        Rectangle(width=1, height=1, cx=float("nan"), cy=0)
+
+    with pytest.raises(ValueError):
+        Rectangle(width=1, height=1, cx=0, cy=float("inf"))
+
+
+def test_circle_invalid_coordinates():
+    with pytest.raises(ValueError):
+        Circle(radius=1, cx=float("nan"), cy=0)
+
+    with pytest.raises(ValueError):
+        Circle(radius=1, cx=0, cy=float("inf"))
+
+
+def test_rectangle_translate_invalid_values():
+    rect = Rectangle(1, 1, 0, 0)
+
+    with pytest.raises(ValueError):
+        rect.translate(float("nan"), 0)
+
+    with pytest.raises(ValueError):
+        rect.translate(0, float("inf"))
+
+
+def test_circle_translate_invalid_values():
+    circle = Circle(1, 0, 0)
+
+    with pytest.raises(ValueError):
+        circle.translate(float("nan"), 0)
+
+    with pytest.raises(ValueError):
+        circle.translate(0, float("inf"))
+
+
+def test_rectangle_non_numeric_values():
+    with pytest.raises(TypeError):
+        Rectangle(width="abc", height=1, cx=0, cy=0)
+
+
+def test_circle_non_numeric_values():
+    with pytest.raises(TypeError):
+        Circle(radius="abc", cx=0, cy=0)
