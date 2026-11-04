@@ -1,3 +1,4 @@
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
@@ -7,13 +8,13 @@ from pydantic import BaseModel
 from .butterflies import get_butterfly_params, load_butterfly_table
 from .geometry import Rectangle
 from .io import dxf_to_string
-from .matching import MatchResult, PatchMatcher
+from .matching import PatchMatcher
 from .svg import scene_to_svg
 from .tables import PatchTable
 
 app = FastAPI(
     title="PatchMatcher API",
-    version="1.1.0",
+    version="1.2.0",
     description="REST API for patch matching, geometry replacement, and butterfly lookup.",
 )
 
@@ -48,8 +49,8 @@ class CircleOut(BaseModel):
 
 class MatchDiagnostics(BaseModel):
     distance: float
-    percentile: float
-    confidence: float
+    distance_ratio: float
+    candidate_count: int
 
 
 class MatchResponse(BaseModel):
@@ -74,16 +75,14 @@ async def match_patch(
     """Return the closest patch match with optional diagnostics."""
     try:
         patches = PatchTable.from_file(Path(table))
-        patches.validate_query(width, height)
-
         matcher = PatchMatcher(patches)
 
         if diagnostics:
-            result: MatchResult = matcher.closest_patch_with_metrics(width, height)
+            result = matcher.closest_patch_with_metrics(width, height)
             diag = MatchDiagnostics(
                 distance=result.distance,
-                percentile=result.percentile,
-                confidence=1 - result.percentile,
+                distance_ratio=result.distance_ratio,
+                candidate_count=result.candidate_count,
             )
             return MatchResponse(
                 matched_width=result.patch.width,
@@ -106,8 +105,6 @@ async def replace_geometry(req: ReplaceRequest) -> ReplaceResponse:
     """Replace geometry using the closest patch and return rectangle, hole, and diagnostics."""
     try:
         patches = PatchTable.from_file(Path(req.table_path))
-        patches.validate_query(req.width, req.height)
-
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(
@@ -117,39 +114,33 @@ async def replace_geometry(req: ReplaceRequest) -> ReplaceResponse:
             cy=req.cy,
         )
 
-        if req.diagnostics:
-            new_rect, hole, diag = matcher.replace_geometry(
-                rect,
-                x_adjust=req.x_adjust,
-                y_adjust=req.y_adjust,
-                hole_radius=req.hole_radius,
-                diagnostics=True,
-            )
+        result = matcher.replace_geometry(
+            rect,
+            x_adjust=req.x_adjust,
+            y_adjust=req.y_adjust,
+            hole_radius=req.hole_radius,
+            diagnostics=req.diagnostics,
+        )
+
+        diag_out = None
+        if result.diagnostics:
             diag_out = MatchDiagnostics(
-                distance=diag.distance,
-                percentile=diag.percentile,
-                confidence=1 - diag.percentile,
+                distance=result.diagnostics.distance,
+                distance_ratio=result.diagnostics.distance_ratio,
+                candidate_count=result.diagnostics.candidate_count,
             )
-        else:
-            new_rect, hole = matcher.replace_geometry(
-                rect,
-                x_adjust=req.x_adjust,
-                y_adjust=req.y_adjust,
-                hole_radius=req.hole_radius,
-            )
-            diag_out = None
 
         return ReplaceResponse(
             rectangle=RectangleOut(
-                width=new_rect.width,
-                height=new_rect.height,
-                cx=new_rect.cx,
-                cy=new_rect.cy,
+                width=result.rectangle.width,
+                height=result.rectangle.height,
+                cx=result.rectangle.cx,
+                cy=result.rectangle.cy,
             ),
             center_hole=CircleOut(
-                radius=hole.radius,
-                cx=hole.cx,
-                cy=hole.cy,
+                radius=result.hole.radius,
+                cx=result.hole.cx,
+                cy=result.hole.cy,
             ),
             diagnostics=diag_out,
         )
@@ -179,19 +170,17 @@ async def replace_dxf(
             raise ValueError("units must be 'in' or 'mm'")
 
         patches = PatchTable.from_file(Path(table))
-        patches.validate_query(width, height)
-
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
-        new_rect, hole = matcher.replace_geometry(
+        result = matcher.replace_geometry(
             rect,
             x_adjust=x_adjust,
             y_adjust=y_adjust,
             hole_radius=hole_radius,
         )
 
-        return dxf_to_string(new_rect, hole, scale=scale, units=units)
+        return dxf_to_string(result.rectangle, result.hole, scale=scale, units=units)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -218,19 +207,17 @@ async def replace_svg(
             raise ValueError("units must be 'px', 'mm', or 'in'")
 
         patches = PatchTable.from_file(Path(table))
-        patches.validate_query(width, height)
-
         matcher = PatchMatcher(patches)
 
         rect = Rectangle(width=width, height=height, cx=cx, cy=cy)
-        new_rect, hole = matcher.replace_geometry(
+        result = matcher.replace_geometry(
             rect,
             x_adjust=x_adjust,
             y_adjust=y_adjust,
             hole_radius=hole_radius,
         )
 
-        return scene_to_svg(new_rect, hole, scale=scale, units=units)
+        return scene_to_svg(result.rectangle, result.hole, scale=scale, units=units)
 
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -250,7 +237,7 @@ async def butterfly_lookup(code: str, table: str | None = None) -> dict:
         else:
             params = get_butterfly_params(code)
 
-        return params.__dict__
+        return asdict(params)
 
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
