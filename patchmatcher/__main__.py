@@ -14,6 +14,14 @@ except ImportError:
     uvicorn = None
 
 
+def print_diagnostics(diag) -> None:
+    if not diag:
+        return
+    print(f"Match distance: {diag.distance:.4f}")
+    print(f"Distance ratio: {diag.distance_ratio:.4f}")
+    print(f"Candidates: {diag.candidate_count}")
+
+
 def cmd_serve(args):
     if uvicorn is None:
         raise SystemExit(
@@ -36,8 +44,7 @@ def cmd_match(args) -> None:
     if args.diagnostics:
         result = matcher.closest_patch_with_metrics(args.width, args.height)
         print(f"Matched patch: {result.patch.width} x {result.patch.height}")
-        print(f"Distance: {result.distance:.4f}")
-        print(f"Confidence: {1 - result.percentile:.4f}")
+        print_diagnostics(result)
     else:
         patch = matcher.closest_patch(args.width, args.height)
         print(f"Matched patch: {patch.width} x {patch.height}")
@@ -58,50 +65,38 @@ def cmd_replace(args) -> None:
             cy=args.cy,
         )
 
-    # Perform replacement
-    if args.diagnostics:
-        new_rect, hole, diag = matcher.replace_geometry(
-            rect,
-            x_adjust=args.x_adjust,
-            y_adjust=args.y_adjust,
-            hole_radius=args.hole_radius,
-            diagnostics=True,
-        )
-    else:
-        new_rect, hole = matcher.replace_geometry(
-            rect,
-            x_adjust=args.x_adjust,
-            y_adjust=args.y_adjust,
-            hole_radius=args.hole_radius,
-        )
-        diag = None
+    # Perform replacement (returns ReplacementResult)
+    result = matcher.replace_geometry(
+        rect,
+        x_adjust=args.x_adjust,
+        y_adjust=args.y_adjust,
+        hole_radius=args.hole_radius,
+        diagnostics=args.diagnostics,
+    )
+    new_rect = result.rectangle
+    hole = result.hole
+    diag = result.diagnostics
 
     # JSON output
     if args.json_out:
         write_json_output(args.json_out, new_rect, hole)
         print(f"Wrote JSON output to {args.json_out}")
-        if diag:
-            print(f"Match distance: {diag.distance:.4f}")
-            print(f"Confidence: {1 - diag.percentile:.4f}")
+        print_diagnostics(diag)
         return
 
     # DXF output
     if args.dxf_out:
         write_dxf(args.dxf_out, new_rect, hole)
         print(f"Wrote DXF to {args.dxf_out}")
-        if diag:
-            print(f"Match distance: {diag.distance:.4f}")
-            print(f"Confidence: {1 - diag.percentile:.4f}")
+        print_diagnostics(diag)
         return
 
     # SVG output
     if args.svg_out:
         svg = scene_to_svg(new_rect, hole)
-        args.svg_out.write_text(svg)
+        args.svg_out.write_text(svg, encoding="utf-8")
         print(f"Wrote SVG to {args.svg_out}")
-        if diag:
-            print(f"Match distance: {diag.distance:.4f}")
-            print(f"Confidence: {1 - diag.percentile:.4f}")
+        print_diagnostics(diag)
         return
 
     # Default text output
@@ -109,10 +104,7 @@ def cmd_replace(args) -> None:
         f"New rectangle: {new_rect.width} x {new_rect.height} at ({new_rect.cx}, {new_rect.cy})"
     )
     print(f"Center hole: radius {hole.radius} at ({hole.cx}, {hole.cy})")
-
-    if diag:
-        print(f"Match distance: {diag.distance:.4f}")
-        print(f"Confidence: {1 - diag.percentile:.4f}")
+    print_diagnostics(diag)
 
 
 def cmd_butterfly(args) -> None:
@@ -175,15 +167,14 @@ def build_parser() -> argparse.ArgumentParser:
         "--diagnostics", action="store_true", help="Show match metrics"
     )
 
-    # JSON I/O
+    # JSON input
     p_replace.add_argument("--json-in", type=Path)
-    p_replace.add_argument("--json-out", type=Path)
 
-    # DXF output
-    p_replace.add_argument("--dxf-out", type=Path)
-
-    # SVG output
-    p_replace.add_argument("--svg-out", type=Path)
+    # Mutually exclusive output group to prevent conflicting export flags
+    out_group = p_replace.add_mutually_exclusive_group()
+    out_group.add_argument("--json-out", type=Path)
+    out_group.add_argument("--dxf-out", type=Path)
+    out_group.add_argument("--svg-out", type=Path)
 
     p_replace.set_defaults(func=cmd_replace)
 
