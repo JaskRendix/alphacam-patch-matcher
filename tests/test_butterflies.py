@@ -90,3 +90,71 @@ def test_validator_wrong_type(tmp_path: Path):
 
     with pytest.raises(TypeError):
         ButterflyParams(**data["W1"])
+
+
+def test_validator_nan_value():
+    with pytest.raises(ValueError):
+        ButterflyParams(
+            diam1=float("nan"),
+            diam2=0.05,
+            circ_offset=0.35,
+            line1=0.6,
+            offset=0.2,
+            angle=9,
+            z_bottom=-0.5,
+            radius1=0,
+            radius2=0,
+        )
+
+
+def test_validator_infinite_value():
+    with pytest.raises(ValueError):
+        ButterflyParams(
+            diam1=float("inf"),
+            diam2=0.05,
+            circ_offset=0.35,
+            line1=0.6,
+            offset=0.2,
+            angle=9,
+            z_bottom=-0.5,
+            radius1=0,
+            radius2=0,
+        )
+
+
+def test_validator_bool_rejected():
+    with pytest.raises(TypeError):
+        ButterflyParams(
+            diam1=True,
+            diam2=0.05,
+            circ_offset=0.35,
+            line1=0.6,
+            offset=0.2,
+            angle=9,
+            z_bottom=-0.5,
+            radius1=0,
+            radius2=0,
+        )
+
+
+def test_load_butterfly_table_path_object(tmp_path):
+    table = tmp_path / "ok.toml"
+
+    table.write_text(
+        """
+[W1]
+diam1 = 0.05
+diam2 = 0.05
+circ_offset = 0.35
+line1 = 0.6
+offset = 0.2
+angle = 9
+z_bottom = -0.5
+radius1 = 0
+radius2 = 0
+"""
+    )
+
+    result = load_butterfly_table(table)
+
+    assert "W1" in result
