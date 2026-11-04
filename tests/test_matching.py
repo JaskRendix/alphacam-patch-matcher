@@ -1,6 +1,6 @@
 import pytest
 
-from patchmatcher.matching import PatchMatcher
+from patchmatcher.matching import MatchResult, PatchMatcher, ReplacementResult
 
 
 def test_closest_patch(top_patches):
@@ -15,7 +15,9 @@ def test_closest_patch(top_patches):
 def test_replace_geometry(top_patches, sample_rect):
     matcher = PatchMatcher(top_patches)
 
-    new_rect, hole = matcher.replace_geometry(sample_rect)
+    result = matcher.replace_geometry(sample_rect)
+    new_rect = result.rectangle
+    hole = result.hole
 
     assert new_rect.cx == sample_rect.cx
     assert new_rect.cy == sample_rect.cy
@@ -40,10 +42,14 @@ def test_closest_patch_exact_match(top_patches):
 def test_replace_geometry_with_adjustments(top_patches, sample_rect):
     matcher = PatchMatcher(top_patches)
 
-    new_rect, _ = matcher.replace_geometry(sample_rect, x_adjust=0.2, y_adjust=0.3)
+    result = matcher.replace_geometry(
+        sample_rect,
+        x_adjust=0.2,
+        y_adjust=0.3,
+    )
 
-    assert new_rect.width > sample_rect.width
-    assert new_rect.height > sample_rect.height
+    assert result.rectangle.width > sample_rect.width
+    assert result.rectangle.height > sample_rect.height
 
 
 def test_closest_patch_returns_patch_within_bounds(top_patches):
@@ -61,12 +67,12 @@ def test_closest_patch_returns_patch_within_bounds(top_patches):
 def test_replace_geometry_types(top_patches, sample_rect):
     matcher = PatchMatcher(top_patches)
 
-    new_rect, hole = matcher.replace_geometry(sample_rect)
+    result = matcher.replace_geometry(sample_rect)
 
     from patchmatcher.geometry import Circle, Rectangle
 
-    assert isinstance(new_rect, Rectangle)
-    assert isinstance(hole, Circle)
+    assert isinstance(result.rectangle, Rectangle)
+    assert isinstance(result.hole, Circle)
 
 
 def test_patchmatcher_holds_reference(top_patches):
@@ -82,32 +88,36 @@ def test_closest_patch_with_metrics(top_patches):
     assert result.patch.width > 0
     assert result.patch.height > 0
     assert result.distance >= 0
-    assert 0 <= result.percentile <= 1
+    assert 0 <= result.distance_ratio <= 1
+    assert result.candidate_count > 0
 
 
 def test_replace_geometry_with_diagnostics(top_patches, sample_rect):
     matcher = PatchMatcher(top_patches)
 
-    new_rect, hole, diag = matcher.replace_geometry(
+    result = matcher.replace_geometry(
         sample_rect,
         diagnostics=True,
     )
 
-    assert new_rect.width > 0
-    assert new_rect.height > 0
-    assert diag.distance >= 0
-    assert 0 <= diag.percentile <= 1
+    assert result.rectangle.width > 0
+    assert result.rectangle.height > 0
+
+    assert result.diagnostics is not None
+    assert result.diagnostics.distance >= 0
+    assert 0 <= result.diagnostics.distance_ratio <= 1
+    assert result.diagnostics.candidate_count > 0
 
 
 def test_replace_geometry_custom_hole_radius(top_patches, sample_rect):
     matcher = PatchMatcher(top_patches)
 
-    new_rect, hole = matcher.replace_geometry(
+    result = matcher.replace_geometry(
         sample_rect,
         hole_radius=0.25,
     )
 
-    assert hole.radius == 0.25
+    assert result.hole.radius == 0.25
 
 
 def test_replace_geometry_invalid_hole_radius(top_patches, sample_rect):
@@ -139,3 +149,22 @@ def test_closest_patch_tie_breaking(top_patches):
 
     assert patch.width == p1.width
     assert patch.height == p1.height
+
+
+def test_replace_geometry_without_diagnostics(top_patches, sample_rect):
+    matcher = PatchMatcher(top_patches)
+
+    result = matcher.replace_geometry(
+        sample_rect,
+        diagnostics=False,
+    )
+
+    assert result.diagnostics is None
+
+
+def test_match_result_candidate_count(top_patches):
+    matcher = PatchMatcher(top_patches)
+
+    result = matcher.closest_patch_with_metrics(3.1, 4.9)
+
+    assert result.candidate_count == len(top_patches)
